@@ -332,13 +332,13 @@ namespace OpenTK
 		{
 			IntPtr windowHandle = gdk_quartz_window_get_nswindow(this.Window.Handle);
 			//IntPtr viewHandle = gdk_quartz_window_get_nsview(this.GdkWindow.Handle);
-			return Utilities.CreateMacOSCarbonWindowInfo(windowHandle, true, true);
+			return Utilities.CreateMacOSWindowInfo(windowHandle);
 		}
 
-		[SuppressUnmanagedCodeSecurity, DllImport("libgdk-quartz-2.0.0.dylib")]
+		[SuppressUnmanagedCodeSecurity, DllImport("libgdk-3.0.dylib")]
 		static extern IntPtr gdk_quartz_window_get_nswindow(IntPtr handle);
 
-		[SuppressUnmanagedCodeSecurity, DllImport("libgdk-quartz-2.0.0.dylib")]
+		[SuppressUnmanagedCodeSecurity, DllImport("libgdk-3.0.dylib")]
 		static extern IntPtr gdk_quartz_window_get_nsview(IntPtr handle);
 
 		#endregion
