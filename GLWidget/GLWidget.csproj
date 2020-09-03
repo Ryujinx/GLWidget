@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -7,10 +6,9 @@
     <Version>1.0.1</Version>
     <RepositoryUrl>https://github.com/Ryujinx/GLWidget</RepositoryUrl>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="GtkSharp" Version="3.22.25.56" />
-    <PackageReference Include="OpenTK.NetStandard" Version="1.0.5.12" />
+    <PackageReference Include="OpenTK.Graphics" Version="4.0.0-pre9.4" />
+    <PackageReference Include="OpenTK.Windowing.Common" Version="4.0.0-pre9.4" />
   </ItemGroup>
-
 </Project>
