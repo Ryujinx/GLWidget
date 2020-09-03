@@ -40,6 +40,7 @@ using OpenTK.Graphics.OpenGL;
 
 using Gtk;
 using Cairo;
+using GLib;
 
 namespace OpenTK
 {
@@ -52,7 +53,7 @@ namespace OpenTK
 		private static int _graphicsContextCount;
 		private static bool _sharedContextInitialized;
 
-        public bool IsRenderHandler { get; set; } = false;
+        public bool HandleRendering { get; set; } = false;
 
 		#endregion
 
@@ -73,6 +74,7 @@ namespace OpenTK
         private int _framebuffer;
         private int _renderbuffer;
         private int _stencilbuffer;
+        private bool _recreateFramebuffer;
 
         public Gdk.GLContext GraphicsContext { get; set; }
         public bool ForwardCompatible { get; }
@@ -173,10 +175,13 @@ namespace OpenTK
 		protected override bool OnDrawn(Cairo.Context cr)
 		{
 			if (!_initialized)
-				Initialize();
-			else if (!IsRenderHandler)
+				System.Threading.Tasks.Task.Run(Initialize).Wait();
+			
+			if (HandleRendering)
             {
                 MakeCurrent();
+
+				OnRenderFrame();
             }
 
             cr.SetSourceColor(new Color(0, 0, 0, 1));
@@ -194,6 +199,13 @@ namespace OpenTK
             GL.Flush();
 
             QueueDraw();
+
+			RecreateFramebuffer();
+
+            if (HandleRendering)
+            {
+				ClearCurrent();
+            }
         }
 
         public void MakeCurrent()
@@ -212,16 +224,26 @@ namespace OpenTK
 		{
 			if (GraphicsContext != null)
 			{
-                MakeCurrent();
-
-                GraphicsContext.Window.Resize(evnt.X, evnt.Y);
-
-                DeleteBuffers();
-
-                CreateFramebuffer();
+				_recreateFramebuffer = true;               
             }
 
 			return true;
+		}
+
+		public void RecreateFramebuffer()
+        {
+            if (!_recreateFramebuffer)
+            {
+				return;
+            }
+
+			_recreateFramebuffer = false;
+
+			GraphicsContext.Window.Resize(AllocatedWidth, AllocatedHeight);
+
+			DeleteBuffers();
+
+			CreateFramebuffer();
 		}
 
         private void DeleteBuffers()
@@ -258,8 +280,6 @@ namespace OpenTK
 		{
 			_initialized = true;
 
-			this.Window.EnsureNative();
-
             GraphicsContext = Window.CreateGlContext();
 
             GraphicsContext.SetRequiredVersion(GLVersionMajor, GLVersionMinor);
@@ -272,9 +292,16 @@ namespace OpenTK
 
             GraphicsContext.MakeCurrent();
 
+            if (!GTKBindingContext.Loaded)
+            {
+				GTKBindingContext.InitializeGlBindings();
+            }
+
             CreateFramebuffer();
 
             OnInitialized();
+
+			ClearCurrent();
 		}
 	}
 }

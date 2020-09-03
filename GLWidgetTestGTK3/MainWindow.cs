@@ -465,8 +465,6 @@ namespace GLWidgetTestGTK3
 
                 //RenderFrame();
 
-                MainGLWidget.ClearCurrent();
-
                 // End delta time calculation
                 deltaTimeWatcher.Stop();
 				this.deltaTime = (float)(deltaTimeWatcher.ElapsedMilliseconds * 0.001f);

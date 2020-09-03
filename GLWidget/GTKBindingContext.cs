@@ -1,15 +1,14 @@
 using System;
 using OpenTK;
-using OpenGL;
 using System.Runtime.InteropServices;
-using Khronos;
 using System.Collections.Generic;
+using System.Reflection;
 
-namespace GLWidgetTestGTK3
+namespace OpenTK
 {
     public class GTKBindingContext : IBindingsContext
     {
-        private static bool _loaded;
+        public static bool Loaded;
 
         private const string GlxLibrary = "libGL.so.1";
         private const string WglLibrary = "opengl32.dll";
@@ -20,20 +19,84 @@ namespace GLWidgetTestGTK3
         /// Currently loaded libraries.
         /// </summary>
         private static readonly Dictionary<string, IntPtr> _LibraryHandles = new Dictionary<string, IntPtr>();
-        
+
+        public bool IsGlxRequired { get; set; }
+
         public IntPtr GetProcAddress(string procName)
         {
-            switch (Platform.CurrentPlatformId)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                case Platform.Id.WindowsNT:
-                    return GetProcAddressWgl(procName);
-                case Platform.Id.Linux:
-                    return GetProcAddressGlx(procName);
-                case Platform.Id.MacOS:
-                    return !Glx.IsRequired ? GetProcAddressOSX(procName) : GetProcAddressGlx(procName);
-                default:
-                    throw new NotSupportedException();
+                var addr = GetProcAddressWgl(procName);
+                if (addr == null || addr == IntPtr.Zero)
+                {
+                    var library = UnsafeNativeMethods.LoadLibrary(WglLibrary);
+
+                    addr = UnsafeNativeMethods.GetProcAddress(library, procName);
+                }
+
+                if (addr != IntPtr.Zero)
+                {
+                    Loaded = true;
+                }
+                return addr;
             }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return GetProcAddressGlx(procName);
+            }
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                var osxAddr = !IsGlxRequired ? GetProcAddressOSX(procName) : GetProcAddressGlx(procName);
+                if (osxAddr != IntPtr.Zero)
+                {
+                    Loaded = true;
+                }
+                return osxAddr;
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        public static void InitializeGlBindings()
+        {
+            // We don't put a hard dependency on OpenTK.Graphics here.
+            // So we need to use reflection to initialize the GL bindings, so users don't have to.
+
+            // Try to load OpenTK.Graphics assembly.
+            Assembly assembly;
+            try
+            {
+                assembly = Assembly.Load("OpenTK.Graphics");
+            }
+            catch
+            {
+                // Failed to load graphics, oh well.
+                // Up to the user I guess?
+                // TODO: Should we expose this load failure to the user better?
+                return;
+            }
+
+            var provider = new GTKBindingContext();
+
+            void LoadBindings(string typeNamespace)
+            {
+                var type = assembly.GetType($"OpenTK.Graphics.{typeNamespace}.GL");
+                if (type == null)
+                {
+                    return;
+                }
+
+                var load = type.GetMethod("LoadBindings");
+                load.Invoke(null, new object[] { provider });
+            }
+
+            LoadBindings("ES11");
+            LoadBindings("ES20");
+            LoadBindings("ES30");
+            LoadBindings("OpenGL");
+            LoadBindings("OpenGL4");
         }
 
         private static IntPtr GetProcAddressWgl(string function)
@@ -43,7 +106,7 @@ namespace GLWidgetTestGTK3
 
         private static void LoadLibraries()
         {
-            if (_loaded)
+            if (Loaded)
             {
                 return;
             }
@@ -60,7 +123,7 @@ namespace GLWidgetTestGTK3
             if (functionPtr != IntPtr.Zero)
                 Delegates.pglXGetProcAddress = (Delegates.glXGetProcAddress)Marshal.GetDelegateForFunctionPointer(functionPtr, typeof(Delegates.glXGetProcAddress));
             
-            _loaded = true;
+            Loaded = true;
         }
 
         internal static IntPtr GetLibraryHandle(string libraryPath, bool throws)
@@ -104,6 +167,15 @@ namespace GLWidgetTestGTK3
 
         private static class UnsafeNativeMethods
         {
+            [DllImport("kernel32.dll", SetLastError = true)]
+            internal static extern IntPtr GetProcAddress(IntPtr handle, string funcname);
+
+            [DllImport("kernel32.dll", SetLastError = true)]
+            internal static extern IntPtr GetProcAddress(IntPtr handle, IntPtr funcname);
+
+            [DllImport("kernel32.dll", SetLastError = true)]
+            internal static extern IntPtr LoadLibrary(string dllName);
+
             [DllImport(WglLibrary, EntryPoint = "wglGetProcAddress", ExactSpelling = true, SetLastError = true)]
             public static extern IntPtr wglGetProcAddress(string lpszProc);
 
