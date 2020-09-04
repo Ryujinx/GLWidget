@@ -55,11 +55,13 @@ namespace OpenTK
 
         public bool HandleRendering { get; set; } = false;
 
-		#endregion
+		public IGraphicsContext NativeGraphicsContext { get; private set; }
 
-		#region Attributes
+        #endregion
 
-		private bool _initialized;
+        #region Attributes
+
+        private bool _initialized;
 
 		#endregion
 
@@ -184,13 +186,13 @@ namespace OpenTK
 				OnRenderFrame();
             }
 
-            cr.SetSourceColor(new Color(0, 0, 0, 1));
+            /*cr.SetSourceColor(new Color(0, 0, 0, 1));
             cr.Paint();
 
             var scale = this.ScaleFactor;
 
             Gdk.CairoHelper.DrawFromGl(cr, this.Window, _renderbuffer, (int)ObjectLabelIdentifier.Renderbuffer, scale, 0, 0, AllocatedWidth, AllocatedHeight);
-
+*/
             return true;
 		}
 
@@ -198,11 +200,13 @@ namespace OpenTK
         {
             GL.Flush();
 
-            QueueDraw();
+            //QueueDraw();
 
-			RecreateFramebuffer();
+            OpenTK.GraphicsContext.GetCurrentContext(Window.Handle).SwapBuffers();
 
-            if (HandleRendering)
+            //RecreateFramebuffer();
+
+            if (!HandleRendering)
             {
 				ClearCurrent();
             }
@@ -210,8 +214,9 @@ namespace OpenTK
 
         public void MakeCurrent()
         {
-            GraphicsContext?.MakeCurrent();
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+            ClearCurrent();
+            NativeGraphicsContext?.MakeCurrent();
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         }
 
         public void ClearCurrent()
@@ -292,12 +297,16 @@ namespace OpenTK
 
             GraphicsContext.MakeCurrent();
 
-            if (!GTKBindingContext.Loaded)
+            if (!GTKBindingHelper.Loaded)
             {
-				GTKBindingContext.InitializeGlBindings();
+				GTKBindingHelper.InitializeGlBindings();
             }
 
-            CreateFramebuffer();
+            OpenTK.GraphicsContext.Display = this.Display.Handle;
+
+            NativeGraphicsContext = OpenTK.GraphicsContext.GetCurrentContext(this.Window.Handle);
+
+           // CreateFramebuffer();
 
             OnInitialized();
 
