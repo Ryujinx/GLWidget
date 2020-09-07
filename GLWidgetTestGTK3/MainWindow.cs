@@ -342,7 +342,10 @@ namespace GLWidgetTestGTK3
 
 			// Add idle event handler to process rendering whenever and as long as time is available.
 			GLInit = true;
-			GLib.Idle.Add(OnIdleProcessMain);
+			//GLib.Idle.Add(OnIdleProcessMain);
+
+			System.Threading.Thread thread = new System.Threading.Thread(Start);
+			thread.Start();
 		}
 
 		protected void RenderFrame()
@@ -449,6 +452,20 @@ namespace GLWidgetTestGTK3
 
             //swap
             MainGLWidget.Swapbuffers();
+
+			MainGLWidget.ClearCurrent();
+        }
+
+		public void Start()
+        {
+			System.Threading.Thread.Sleep(1000);
+
+			while (true)
+            {
+				RenderFrame();
+
+				System.Threading.Thread.Sleep(5);
+            }
         }
 
 		protected bool OnIdleProcessMain()
@@ -461,9 +478,9 @@ namespace GLWidgetTestGTK3
                 Stopwatch deltaTimeWatcher = new Stopwatch();
 				deltaTimeWatcher.Start();
 
-                System.Threading.Tasks.Task.Run(RenderFrame).Wait();
+                //System.Threading.Tasks.Task.Run(RenderFrame).Wait();
 
-                //RenderFrame();
+                RenderFrame();
 
                 // End delta time calculation
                 deltaTimeWatcher.Stop();

@@ -147,6 +147,30 @@ namespace OpenTK
             Loaded = true;
         }
 
+        public static IntPtr GetWindowHandle(IntPtr handle)
+        {
+            if(CurrentPlatform == OSPlatform.Windows)
+            {
+                return UnsafeNativeMethods.gdk_win32_window_get_handle(handle);
+            }
+            else
+            {
+                return UnsafeNativeMethods.gdk_x11_window_get_xid(handle);
+            }
+        }
+
+        public static IntPtr GetDisplayHandle(IntPtr handle)
+        {
+            if (CurrentPlatform == OSPlatform.Windows)
+            {
+                return IntPtr.Zero;
+            }
+            else
+            {
+                return UnsafeNativeMethods.gdk_x11_display_get_xdisplay(handle);
+            }
+        }
+
         internal static IntPtr GetLibraryHandle(string libraryPath, bool throws)
         {
             IntPtr libraryHandle;
@@ -192,9 +216,6 @@ namespace OpenTK
             internal static extern IntPtr GetProcAddress(IntPtr handle, string funcname);
 
             [DllImport("kernel32.dll", SetLastError = true)]
-            internal static extern IntPtr GetProcAddress(IntPtr handle, IntPtr funcname);
-
-            [DllImport("kernel32.dll", SetLastError = true)]
             internal static extern IntPtr LoadLibrary(string dllName);
 
             [DllImport(WglLibrary, EntryPoint = "wglGetProcAddress", ExactSpelling = true, SetLastError = true)]
@@ -224,6 +245,12 @@ namespace OpenTK
             [DllImport(GlxLibrary, EntryPoint = "glXGetCurrentContext")]
             public static extern IntPtr glXGetCurrentContext();
 
+            [DllImport(GlxLibrary, EntryPoint = "glXGetProcAddress")]
+            public static extern IntPtr glXGetProcAddress();
+
+            [DllImport(GlxLibrary, EntryPoint = "glXSwapIntervalEXT")]
+            public static extern IntPtr glXSwapIntervalEXT(int interval);
+
             [DllImport(GlxLibrary, EntryPoint = "glXMakeCurrent")]
             public static extern bool glXMakeCurrent(IntPtr display, IntPtr drawable, IntPtr context);
 
@@ -246,22 +273,13 @@ namespace OpenTK
             public const string GdkNativeDll = "libgdk-3-0.dll";
 
             [DllImport(GdkNativeDll, CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr gdk_win32_drawable_get_handle(IntPtr raw);
-
-            [DllImport(GdkNativeDll, CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr gdk_win32_hdc_get(IntPtr drawable, IntPtr gc, int usage);
-
-            [DllImport(GdkNativeDll, CallingConvention = CallingConvention.Cdecl)]
-            public static extern void gdk_win32_hdc_release(IntPtr drawable, IntPtr gc, int usage);
+            public static extern IntPtr gdk_win32_window_get_handle(IntPtr raw);
 
             [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
             public static extern IntPtr gdk_x11_display_get_xdisplay(IntPtr raw);
 
             [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
             public static extern IntPtr gdk_x11_window_get_xid(IntPtr raw);
-
-            [DllImport(GdkNativeDll, CallingConvention = CallingConvention.Cdecl)]
-            public static extern void gdk_window_get_internal_paint_info(IntPtr raw, out IntPtr real_drawable, out int x, out int y);
         }
 
         private static class Delegates

@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
+using OpenGL;
+
 using static OpenTK.GTKBindingHelper;
 
 namespace OpenTK
@@ -8,8 +10,8 @@ namespace OpenTK
     {
         void MakeCurrent();
         void SwapBuffers();
-
         void ClearCurrent();
+        void SwapInterval(int interval);
     }
 
     public abstract class GraphicsContext : IGraphicsContext
@@ -19,6 +21,24 @@ namespace OpenTK
         public abstract void MakeCurrent();
 
         public abstract void SwapBuffers();
+
+        public static void InitializeDefaults(IntPtr handle)
+        {
+            if (CurrentPlatform == OSPlatform.Windows)
+            {
+                IntPtr deviceContext = Wgl.GetDC(UnsafeNativeMethods.gdk_win32_window_get_handle(handle));
+
+                Wgl.PIXELFORMATDESCRIPTOR pfd = new Wgl.PIXELFORMATDESCRIPTOR(24);
+
+                pfd.dwFlags |= Wgl.PixelFormatDescriptorFlags.DepthDontCare | Wgl.PixelFormatDescriptorFlags.DoublebufferDontCare | Wgl.PixelFormatDescriptorFlags.StereoDontCare;
+
+                int pFormat = Wgl.ChoosePixelFormat(deviceContext, ref pfd);
+
+                bool res = Wgl.DescribePixelFormat(deviceContext, pFormat, (uint)pfd.nSize, ref pfd) != 0;
+
+                res = Wgl.SetPixelFormat(deviceContext, pFormat, ref pfd);
+            }
+        }
 
         public static IGraphicsContext GetCurrentContext(IntPtr handle)
         {
@@ -39,10 +59,14 @@ namespace OpenTK
         }
 
         public abstract void ClearCurrent();
+        public abstract void SwapInterval(int interval);
     }
 
     public class WglGraphicsContext : GraphicsContext
     {
+        private delegate int wglSwapIntervalExtDelegate(int interval);
+        private static wglSwapIntervalExtDelegate wglSwapIntervalExt = null;
+
         private IntPtr _windowHandle;
         private IntPtr _deviceContext;
 
@@ -51,6 +75,14 @@ namespace OpenTK
             _deviceContext = deviceContext;
             _graphicsContext = graphicsContext;
             _windowHandle = windowHandle;
+
+            IntPtr swapIntervalPointer = UnsafeNativeMethods.wglGetProcAddress("wglSwapIntervalEXT");
+
+            if(swapIntervalPointer != null && swapIntervalPointer != IntPtr.Zero)
+            {
+                wglSwapIntervalExt = (wglSwapIntervalExtDelegate)Marshal.GetDelegateForFunctionPointer(
+                        swapIntervalPointer, typeof(wglSwapIntervalExtDelegate));
+            }
         }
 
         private IntPtr _graphicsContext;
@@ -75,15 +107,18 @@ namespace OpenTK
 
         public override void ClearCurrent()
         {
-            throw new NotImplementedException();
+            UnsafeNativeMethods.WglMakeCurrent(_deviceContext, IntPtr.Zero);
+        }
+
+        public override void SwapInterval(int interval)
+        {
+            wglSwapIntervalExt?.Invoke(interval);
         }
     }
 
     public class GlxGraphicsContext : GraphicsContext
     {
         private IntPtr _windowHandle;
-
-        private IntPtr _drawable;
 
         public static GlxGraphicsContext GetCurrent(IntPtr windowHandle, IntPtr display)
         {
@@ -115,6 +150,11 @@ namespace OpenTK
         public override void ClearCurrent()
         {
             UnsafeNativeMethods.glXMakeCurrent(_display, _windowHandle, IntPtr.Zero);
+        }
+
+        public override void SwapInterval(int interval)
+        {
+            UnsafeNativeMethods.glXSwapIntervalEXT(interval);
         }
     }
 }

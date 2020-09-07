@@ -41,21 +41,117 @@ using OpenTK.Graphics.OpenGL;
 using Gtk;
 using Cairo;
 using GLib;
+using Gdk;
+using OpenGL;
+using System.Diagnostics;
+using OpenTK.Mathematics;
 
 namespace OpenTK
 {
 	[ToolboxItem(true)]
 	public class GLWidget : DrawingArea
 	{
+		/// <summary>
+		/// Get or set the OpenGL minimum color buffer bits.
+		/// </summary>
+		[Property("color-bits")]
+		public uint ColorBits
+		{
+			get { return (_ColorBits); }
+			set { _ColorBits = value; }
+		}
+
+		/// <summary>
+		/// The OpenGL color buffer bits.
+		/// </summary>
+		private uint _ColorBits = 24;
+
+		/// <summary>
+		/// Get or set the OpenGL minimum depth buffer bits.
+		/// </summary>
+		[Property("depth-bits")]
+		public uint DepthBits
+		{
+			get { return (_DepthBits); }
+			set { _DepthBits = value; }
+		}
+
+		/// <summary>
+		/// The OpenGL color buffer bits.
+		/// </summary>
+		private uint _DepthBits;
+
+		/// <summary>
+		/// Get or set the OpenGL minimum stencil buffer bits.
+		/// </summary>
+		[Property("stencil-bits")]
+		public uint StencilBits
+		{
+			get { return (_StencilBits); }
+			set { _StencilBits = value; }
+		}
+
+		/// <summary>
+		/// The OpenGL color buffer bits.
+		/// </summary>
+		private uint _StencilBits;
+
+		/// <summary>
+		/// Get or set the OpenGL minimum multisample buffer "bits".
+		/// </summary>
+		[Property("multisample-bits")]
+		public uint MultisampleBits
+		{
+			get { return (_MultisampleBits); }
+			set { _MultisampleBits = value; }
+		}
+
+		/// <summary>
+		/// The OpenGL multisample buffer bits.
+		/// </summary>
+		private uint _MultisampleBits;
+
+		/// <summary>
+		/// Get or set the OpenGL swap buffers interval.
+		/// </summary>
+		[Property("swap-interval")]
+		public int SwapInterval
+		{
+			get { return (_SwapInterval); }
+			set { _SwapInterval = value; }
+		}
+
+		/// <summary>
+		/// The OpenGL swap buffers interval.
+		/// </summary>
+		private int _SwapInterval = 1;
+
+		/// <summary>
+		/// The <see cref="DevicePixelFormat"/> describing the minimum pixel format required by this control.
+		/// </summary>
+		private DevicePixelFormat ControlPixelFormat
+		{
+			get
+			{
+				DevicePixelFormat controlReqFormat = new DevicePixelFormat();
+
+				controlReqFormat.RgbaUnsigned = true;
+				controlReqFormat.RenderWindow = true;
+
+				controlReqFormat.ColorBits = (int)ColorBits;
+				controlReqFormat.DepthBits = (int)DepthBits;
+				controlReqFormat.StencilBits = (int)StencilBits;
+				controlReqFormat.MultisampleBits = (int)MultisampleBits;
+				controlReqFormat.DoubleBuffer = true;
+
+				return (controlReqFormat);
+			}
+		}
+
+
 
 		#region Static attrs.
-
-		private static int _graphicsContextCount;
-		private static bool _sharedContextInitialized;
-
         public bool HandleRendering { get; set; } = false;
-
-		public IGraphicsContext NativeGraphicsContext { get; private set; }
 
         #endregion
 
@@ -73,13 +169,14 @@ namespace OpenTK
 		/// <summary>The minor version of OpenGL to use.</summary>
 		public int GLVersionMinor { get; set; }
 
-        private int _framebuffer;
-        private int _renderbuffer;
-        private int _stencilbuffer;
-        private bool _recreateFramebuffer;
+        private DeviceContext _deviceContext;
+        private IntPtr _graphicsContext;
+        private int _error;
 
-        public Gdk.GLContext GraphicsContext { get; set; }
+		private IGraphicsContext _context;
+
         public bool ForwardCompatible { get; }
+        public DeviceContext DeviceContext { get => _deviceContext; set => _deviceContext = value; }
 
         #endregion
 
@@ -88,7 +185,9 @@ namespace OpenTK
         /// <summary>Constructs a new GLWidget</summary>
         public GLWidget() : this(new Version(4, 0), true)
         {
-
+			/*this.ColorBits = 32;
+			this.DepthBits = 24;
+			this.StencilBits = 8;*/
         }
 
         /// <summary>Constructs a new GLWidget</summary>
@@ -97,7 +196,7 @@ namespace OpenTK
 			GLVersionMajor = apiVersion.Major;
 			GLVersionMinor = apiVersion.Minor;
             ForwardCompatible = forwardCompatible;
-        }
+		}
 
 		~GLWidget()
 		{
@@ -109,8 +208,10 @@ namespace OpenTK
 			if (disposing)
 			{
 				OnShuttingDown();
-				
-				GraphicsContext.Dispose();
+
+				DeviceContext.DeleteContext(_graphicsContext);
+
+				DeviceContext.Dispose();
 			}
 		}
 
@@ -121,27 +222,11 @@ namespace OpenTK
 		// Called when the first GraphicsContext is created in the case of GraphicsContext.ShareContexts == True;
 		public static event EventHandler GraphicsContextInitialized;
 
-		private static void OnGraphicsContextInitialized()
-		{
-			if (GraphicsContextInitialized != null)
-			{
-				GraphicsContextInitialized(null, EventArgs.Empty);
-			}
-		}
+        // Called when the first GraphicsContext is being destroyed in the case of GraphicsContext.ShareContexts == True;
+        public static event EventHandler GraphicsContextShuttingDown;
 
-		// Called when the first GraphicsContext is being destroyed in the case of GraphicsContext.ShareContexts == True;
-		public static event EventHandler GraphicsContextShuttingDown;
-
-		private static void OnGraphicsContextShuttingDown()
-		{
-			if (GraphicsContextShuttingDown != null)
-			{
-				GraphicsContextShuttingDown(null, EventArgs.Empty);
-			}
-		}
-
-		// Called when this GLWidget has a valid GraphicsContext
-		public event EventHandler Initialized;
+        // Called when this GLWidget has a valid GraphicsContext
+        public event EventHandler Initialized;
 
 		protected virtual void OnInitialized()
 		{
@@ -177,140 +262,177 @@ namespace OpenTK
 		protected override bool OnDrawn(Cairo.Context cr)
 		{
 			if (!_initialized)
-				System.Threading.Tasks.Task.Run(Initialize).Wait();
-			
-			if (HandleRendering)
-            {
-                MakeCurrent();
+				Initialize();
 
-				OnRenderFrame();
-            }
+			ClearCurrent();
 
-            /*cr.SetSourceColor(new Color(0, 0, 0, 1));
-            cr.Paint();
-
-            var scale = this.ScaleFactor;
-
-            Gdk.CairoHelper.DrawFromGl(cr, this.Window, _renderbuffer, (int)ObjectLabelIdentifier.Renderbuffer, scale, 0, 0, AllocatedWidth, AllocatedHeight);
-*/
             return true;
 		}
 
         public void Swapbuffers()
         {
-            GL.Flush();
-
-            //QueueDraw();
-
-            OpenTK.GraphicsContext.GetCurrentContext(Window.Handle).SwapBuffers();
-
-            //RecreateFramebuffer();
-
-            if (!HandleRendering)
-            {
-				ClearCurrent();
-            }
+           DeviceContext?.SwapBuffers();
         }
 
-        public void MakeCurrent()
-        {
-            ClearCurrent();
-            NativeGraphicsContext?.MakeCurrent();
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        }
+		public void MakeCurrent()
+		{
+			ClearCurrent();
+
+			_context?.MakeCurrent();
+
+			_error = Marshal.GetLastWin32Error();
+		}
 
         public void ClearCurrent()
-        {
-            Gdk.GLContext.ClearCurrent();
-        }
-
-        // Called on Resize
-        protected override bool OnConfigureEvent(Gdk.EventConfigure evnt)
 		{
-			if (GraphicsContext != null)
+			//Gdk.GLContext.ClearCurrent();
+			DeviceContext?.MakeCurrent(IntPtr.Zero);
+		}
+
+		private void CreateContext()
+		{
+			if (_graphicsContext != IntPtr.Zero)
+				throw new InvalidOperationException("context already created");
+
+			IntPtr sharingContext = IntPtr.Zero;
+
+			if (Gl.PlatformExtensions.CreateContext_ARB)
 			{
-				_recreateFramebuffer = true;               
-            }
+				List<int> attributes = new List<int>();
+				uint contextProfile = 0, contextFlags = 0;
+				bool debuggerAttached = Debugger.IsAttached;
 
-			return true;
+				#region WGL_ARB_create_context|GLX_ARB_create_context
+
+				#endregion
+
+				#region WGL_ARB_create_context_profile|GLX_ARB_create_context_profile
+
+				if (Gl.PlatformExtensions.CreateContextProfile_ARB)
+				{
+
+				}
+
+				#endregion
+
+				#region WGL_ARB_create_context_robustness|GLX_ARB_create_context_robustness
+
+				if (Gl.PlatformExtensions.CreateContextRobustness_ARB)
+				{
+
+				}
+
+				#endregion
+
+				Debug.Assert(Wgl.CONTEXT_FLAGS_ARB == Glx.CONTEXT_FLAGS_ARB);
+				if (contextFlags != 0)
+					attributes.AddRange(new int[] { Wgl.CONTEXT_FLAGS_ARB, unchecked((int)contextFlags) });
+
+				Debug.Assert(Wgl.CONTEXT_PROFILE_MASK_ARB == Glx.CONTEXT_PROFILE_MASK_ARB);
+				Debug.Assert(contextProfile == 0 || Gl.PlatformExtensions.CreateContextProfile_ARB);
+				if (contextProfile != 0)
+					attributes.AddRange(new int[] { Wgl.CONTEXT_PROFILE_MASK_ARB, unchecked((int)contextProfile) });
+
+				attributes.Add(0);
+
+				if ((_graphicsContext = _deviceContext.CreateContextAttrib(sharingContext, attributes.ToArray())) == IntPtr.Zero)
+					throw new InvalidOperationException(String.Format("unable to create render context ({0})", Gl.GetError()));
+			}
+			else
+			{
+				// Create OpenGL context using compatibility profile
+				if ((_graphicsContext = _deviceContext.CreateContext(sharingContext)) == IntPtr.Zero)
+					throw new InvalidOperationException("unable to create render context");
+			}
 		}
 
-		public void RecreateFramebuffer()
-        {
-            if (!_recreateFramebuffer)
-            {
-				return;
-            }
-
-			_recreateFramebuffer = false;
-
-			GraphicsContext.Window.Resize(AllocatedWidth, AllocatedHeight);
-
-			DeleteBuffers();
-
-			CreateFramebuffer();
-		}
-
-        private void DeleteBuffers()
-        {
-            if (_framebuffer != 0)
-            {
-                GL.DeleteFramebuffer(_framebuffer);
-                GL.DeleteRenderbuffer(_renderbuffer);
-            }
-        }
-
-        private void CreateFramebuffer()
-        {
-            _framebuffer = GL.GenFramebuffer();
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-
-            _renderbuffer = GL.GenRenderbuffer();
-            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _renderbuffer);
-            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.Rgba8, AllocatedWidth, AllocatedHeight);
-
-            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _renderbuffer);
-
-            _stencilbuffer = GL.GenRenderbuffer();
-            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _stencilbuffer);
-            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.Depth24Stencil8, AllocatedWidth, AllocatedHeight);
-
-            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, _stencilbuffer);
-
-            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, 0);
-            var state = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
-        }
-
-        private void Initialize()
+		private void CreateDeviceContext(DevicePixelFormat controlReqFormat)
 		{
-			_initialized = true;
+			#region Create device context
 
-            GraphicsContext = Window.CreateGlContext();
+			DeviceContext = DeviceContext.Create(GTKBindingHelper.GetDisplayHandle(Display.Handle), GTKBindingHelper.GetWindowHandle(Window.Handle));
+			DeviceContext.IncRef();
 
-            GraphicsContext.SetRequiredVersion(GLVersionMajor, GLVersionMinor);
+			#endregion
 
-            GraphicsContext.SetUseEs(0);
+			#region Set pixel format
 
-            GraphicsContext.ForwardCompatible = ForwardCompatible;
+			DevicePixelFormatCollection pixelFormats = DeviceContext.PixelsFormats;
+			List<DevicePixelFormat> matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
 
-            GraphicsContext.Realize();
+			if ((matchingPixelFormats.Count == 0) && controlReqFormat.MultisampleBits > 0)
+			{
+				// Try to select the maximum multisample configuration
+				int multisampleBits = 0;
 
-            GraphicsContext.MakeCurrent();
+				pixelFormats.ForEach(delegate (DevicePixelFormat item) { multisampleBits = Math.Max(multisampleBits, item.MultisampleBits); });
 
-            if (!GTKBindingHelper.Loaded)
-            {
-				GTKBindingHelper.InitializeGlBindings();
-            }
+				controlReqFormat.MultisampleBits = multisampleBits;
 
-            OpenTK.GraphicsContext.Display = this.Display.Handle;
+				matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
+			}
 
-            NativeGraphicsContext = OpenTK.GraphicsContext.GetCurrentContext(this.Window.Handle);
+			if ((matchingPixelFormats.Count == 0) && controlReqFormat.DoubleBuffer)
+			{
+				// Try single buffered pixel formats
+				controlReqFormat.DoubleBuffer = false;
 
-           // CreateFramebuffer();
+				matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
+				if (matchingPixelFormats.Count == 0)
+					throw new InvalidOperationException(String.Format("unable to find a suitable pixel format: {0}", pixelFormats.GuessChooseError(controlReqFormat)));
+			}
+			else if (matchingPixelFormats.Count == 0)
+				throw new InvalidOperationException(String.Format("unable to find a suitable pixel format: {0}", pixelFormats.GuessChooseError(controlReqFormat)));
+
+			DeviceContext.SetPixelFormat(matchingPixelFormats[0]);
+
+			#endregion
+
+			#region Set V-Sync
+
+			if (Gl.PlatformExtensions.SwapControl)
+			{
+				int swapInterval = SwapInterval;
+
+				// Mask value in case it is not supported
+				if (!Gl.PlatformExtensions.SwapControlTear && swapInterval == -1)
+					swapInterval = 1;
+
+				DeviceContext.SwapInterval(swapInterval);
+			}
+
+			#endregion
+		}
+
+		private void Initialize()
+		{
+			ClearCurrent();
+
+            Khronos.KhronosApi.LogEnabled = true;
+			Wgl.ErrorHandling = Wgl.ErrorHandlingMode.Normal;
+
+			Window.EnsureNative();
+
+			CreateDeviceContext(ControlPixelFormat);
+
+			CreateContext();
+
+			DeviceContext.MakeCurrent(_graphicsContext);
+
+			_context = GraphicsContext.GetCurrentContext(Window.Handle);
+
+			MakeCurrent();
+
+			GTKBindingHelper.InitializeGlBindings();
 
             OnInitialized();
 
+			OpenTK.GraphicsContext.GetCurrentContext(Window.Handle).SwapInterval(1);
+
 			ClearCurrent();
+
+			_initialized = true;
+
 		}
 	}
 }
