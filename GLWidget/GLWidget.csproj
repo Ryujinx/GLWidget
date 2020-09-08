@@ -3,7 +3,7 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>GLWigdet for GTKSharp, using Opentk.</Description>
-    <Version>1.0.3-pre1</Version>
+    <Version>1.0.3.2</Version>
     <RepositoryUrl>https://github.com/Ryujinx/GLWidget</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>

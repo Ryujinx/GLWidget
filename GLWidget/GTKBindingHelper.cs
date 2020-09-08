@@ -30,7 +30,7 @@ namespace OpenTK
         }
 
         public static bool Loaded;
-
+        private static bool _threadsInitialized;
         private const string GlxLibrary = "libGL.so.1";
         private const string WglLibrary = "opengl32.dll";
         private const string OSXLibrary = "libdl.dylib";
@@ -210,6 +210,21 @@ namespace OpenTK
             return symbol;
         }
 
+        public static void InitXThreads()
+        {
+            if (_threadsInitialized)
+            {
+                return;
+            }
+            
+            if (CurrentPlatform == OSPlatform.Linux)
+            {
+                _threadsInitialized = true;
+
+                UnsafeNativeMethods.XInitThreads();
+            }
+        }
+
         internal static class UnsafeNativeMethods
         {
             [DllImport("kernel32.dll", SetLastError = true)]
@@ -241,6 +256,9 @@ namespace OpenTK
 
             [DllImport(OSXLibrary, EntryPoint = "NSAddressOfSymbol")]
             public static extern IntPtr NSAddressOfSymbol(IntPtr symbol);
+
+            [DllImport("libX11.so.6")]
+            public extern static int XInitThreads();
 
             [DllImport(OSXLibrary)]
             public extern static int CGLSetCurrentContext(IntPtr ctx);

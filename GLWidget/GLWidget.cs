@@ -51,10 +51,12 @@ namespace OpenTK
 	[ToolboxItem(true)]
 	public class GLWidget : DrawingArea
 	{
-		/// <summary>
-		/// Get or set the OpenGL minimum color buffer bits.
-		/// </summary>
-		[Property("color-bits")]
+        private static bool xThreadInit;
+
+        /// <summary>
+        /// Get or set the OpenGL minimum color buffer bits.
+        /// </summary>
+        [Property("color-bits")]
 		public uint ColorBits
 		{
 			get { return (_ColorBits); }
@@ -194,7 +196,7 @@ namespace OpenTK
         /// <summary>Constructs a new GLWidget</summary>
         public GLWidget(Version apiVersion, bool forwardCompatible)
 		{
-			GLVersionMajor = apiVersion.Major;
+            GLVersionMajor = apiVersion.Major;
 			GLVersionMinor = apiVersion.Minor;
             ForwardCompatible = forwardCompatible;
 		}
