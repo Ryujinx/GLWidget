@@ -174,6 +174,7 @@ namespace OpenTK
         private int _error;
 
 		private IGraphicsContext _context;
+        private GLContext _gdkGlContext;
 
         public bool ForwardCompatible { get; }
         public DeviceContext DeviceContext { get => _deviceContext; set => _deviceContext = value; }
@@ -209,10 +210,12 @@ namespace OpenTK
 			{
 				OnShuttingDown();
 
-				DeviceContext.DeleteContext(_graphicsContext);
+				DeviceContext?.DeleteContext(_graphicsContext);
 
-				DeviceContext.Dispose();
-			}
+				DeviceContext?.Dispose();
+
+                _gdkGlContext?.Dispose();
+            }
 		}
 
 		#endregion
@@ -271,7 +274,7 @@ namespace OpenTK
 
         public void Swapbuffers()
         {
-           DeviceContext?.SwapBuffers();
+            _context?.SwapBuffers();
         }
 
 		public void MakeCurrent()
@@ -285,9 +288,15 @@ namespace OpenTK
 
         public void ClearCurrent()
 		{
-			//Gdk.GLContext.ClearCurrent();
-			DeviceContext?.MakeCurrent(IntPtr.Zero);
-		}
+            if (GTKBindingHelper.CurrentPlatform == OSPlatform.Windows)
+            {
+                DeviceContext?.MakeCurrent(IntPtr.Zero);
+            }
+            else
+            {
+            	Gdk.GLContext.ClearCurrent();
+            }
+        }
 
 		private void CreateContext()
 		{
@@ -404,20 +413,42 @@ namespace OpenTK
 			#endregion
 		}
 
-		private void Initialize()
+        private void CreateGdkGlContext()
+        {
+            _gdkGlContext = Window.CreateGlContext();
+
+            _gdkGlContext.SetRequiredVersion(GLVersionMajor, GLVersionMinor);
+
+            _gdkGlContext.ForwardCompatible = ForwardCompatible;
+
+            _gdkGlContext.SetUseEs(0);
+
+            _gdkGlContext.Realize();
+
+            _gdkGlContext.MakeCurrent();
+        }
+
+        private void Initialize()
 		{
 			ClearCurrent();
 
             Khronos.KhronosApi.LogEnabled = true;
-			Wgl.ErrorHandling = Wgl.ErrorHandlingMode.Normal;
 
 			Window.EnsureNative();
 
-			CreateDeviceContext(ControlPixelFormat);
+            if (GTKBindingHelper.CurrentPlatform == OSPlatform.Windows)
+            {
+                CreateDeviceContext(ControlPixelFormat);
 
-			CreateContext();
+                CreateContext();
 
-			DeviceContext.MakeCurrent(_graphicsContext);
+                DeviceContext.MakeCurrent(_graphicsContext);
+            }
+			else {
+                GraphicsContext.Display = Display.Handle;
+
+                CreateGdkGlContext();
+            }
 
 			_context = GraphicsContext.GetCurrentContext(Window.Handle);
 

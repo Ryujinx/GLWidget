@@ -54,6 +54,10 @@ namespace OpenTK
                 }
                 return GlxGraphicsContext.GetCurrent(handle, Display);
             }
+            else if (currentPlatform == OSPlatform.OSX)
+            {
+                return CglGraphicsContext.GetCurrent();
+            }
 
             return null;
         }
@@ -155,6 +159,46 @@ namespace OpenTK
         public override void SwapInterval(int interval)
         {
             UnsafeNativeMethods.glXSwapIntervalEXT(interval);
+        }
+    }
+
+    public class CglGraphicsContext : GraphicsContext
+    {
+        private IntPtr _windowHandle;
+
+        public static CglGraphicsContext GetCurrent()
+        {
+            var gc = UnsafeNativeMethods.CGLGetCurrentContext();
+
+            return new CglGraphicsContext(gc);
+        }
+
+        public CglGraphicsContext(IntPtr graphicsContext)
+        {
+            _graphicsContext = graphicsContext;
+        }
+
+        private IntPtr _graphicsContext;
+        private IntPtr _display;
+
+        public override void MakeCurrent()
+        {
+            UnsafeNativeMethods.CGLSetCurrentContext(_graphicsContext);
+        }
+
+        public override void SwapBuffers()
+        {
+            UnsafeNativeMethods.CGLFlushDrawable(_graphicsContext);
+        }
+
+        public override void ClearCurrent()
+        {
+            UnsafeNativeMethods.CGLSetCurrentContext(IntPtr.Zero);
+        }
+
+        public override void SwapInterval(int interval)
+        {
+            UnsafeNativeMethods.CGLSetParameter(_graphicsContext, 222 , ref interval);
         }
     }
 }

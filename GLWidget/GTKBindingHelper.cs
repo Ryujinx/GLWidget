@@ -67,7 +67,7 @@ namespace OpenTK
             }
             else if(CurrentPlatform == OSPlatform.OSX)
             {
-                var osxAddr = !IsGlxRequired ? GetProcAddressOSX(procName) : GetProcAddressGlx(procName);
+                var osxAddr = GetProcAddressOSX(procName);
                 if (osxAddr != IntPtr.Zero)
                 {
                     Loaded = true;
@@ -241,6 +241,22 @@ namespace OpenTK
 
             [DllImport(OSXLibrary, EntryPoint = "NSAddressOfSymbol")]
             public static extern IntPtr NSAddressOfSymbol(IntPtr symbol);
+
+            [DllImport(OSXLibrary)]
+            public extern static int CGLSetCurrentContext(IntPtr ctx);
+
+            [DllImport(OSXLibrary)]
+            public extern static IntPtr CGLGetCurrentContext();
+            [DllImport(OSXLibrary)]
+            public extern static void CGLReleaseContext(IntPtr ctx);
+            [DllImport(OSXLibrary)]
+            public extern static int CGLFlushDrawable(IntPtr ctx);
+
+            [DllImport(OSXLibrary)]
+            internal static extern int CGLDestroyContext(IntPtr ctx);
+
+            [DllImport(OSXLibrary)]
+            internal static extern int CGLSetParameter(IntPtr ctx, int parameter, ref int value);
 
             [DllImport(GlxLibrary, EntryPoint = "glXGetCurrentContext")]
             public static extern IntPtr glXGetCurrentContext();
