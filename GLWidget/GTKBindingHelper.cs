@@ -47,32 +47,16 @@ namespace OpenTK
         {
             if (CurrentPlatform == OSPlatform.Windows)
             {
-                var addr = GetProcAddressWgl(procName);
-                if (addr == null || addr == IntPtr.Zero)
-                {
-                    var library = UnsafeNativeMethods.LoadLibrary(WglLibrary);
-
-                    addr = UnsafeNativeMethods.GetProcAddress(library, procName);
-                }
-
-                if (addr != IntPtr.Zero)
-                {
-                    Loaded = true;
-                }
-                return addr;
+                IntPtr library = OpenTK.Platform.Windows.Functions.LoadLibrary(WglLibrary);
+                return OpenTK.Platform.Windows.Functions.GetProcAddress(library, procName);
             }
             else if (CurrentPlatform == OSPlatform.Linux)
             {
-                return GetProcAddressGlx(procName);
+                return OpenTK.Platform.X11.Glx.GetProcAddress(procName);
             }
             else if(CurrentPlatform == OSPlatform.OSX)
             {
-                var osxAddr = GetProcAddressOSX(procName);
-                if (osxAddr != IntPtr.Zero)
-                {
-                    Loaded = true;
-                }
-                return osxAddr;
+                return OpenTK.Platform.MacOS.NS.GetAddress(procName);
             }
             else
             {

@@ -35,437 +35,535 @@ using System.ComponentModel;
 
 
 using OpenTK.Graphics;
-using OpenTK.Graphics.OpenGL;
-
+using OpenTK.Platform;
 
 using Gtk;
-using Cairo;
-using GLib;
-using Gdk;
-using OpenGL;
-using System.Diagnostics;
-using OpenTK.Mathematics;
 
 namespace OpenTK
 {
-	[ToolboxItem(true)]
-	public class GLWidget : DrawingArea
-	{
-        private static bool xThreadInit;
+    [ToolboxItem(true)]
+    public class GLWidget : DrawingArea
+    {
 
-        /// <summary>
-        /// Get or set the OpenGL minimum color buffer bits.
-        /// </summary>
-        [Property("color-bits")]
-		public uint ColorBits
-		{
-			get { return (_ColorBits); }
-			set { _ColorBits = value; }
-		}
+        #region Static attrs.
 
-		/// <summary>
-		/// The OpenGL color buffer bits.
-		/// </summary>
-		private uint _ColorBits = 24;
+        private static int _graphicsContextCount;
+        private static bool _sharedContextInitialized;
 
-		/// <summary>
-		/// Get or set the OpenGL minimum depth buffer bits.
-		/// </summary>
-		[Property("depth-bits")]
-		public uint DepthBits
-		{
-			get { return (_DepthBits); }
-			set { _DepthBits = value; }
-		}
-
-		/// <summary>
-		/// The OpenGL color buffer bits.
-		/// </summary>
-		private uint _DepthBits;
-
-		/// <summary>
-		/// Get or set the OpenGL minimum stencil buffer bits.
-		/// </summary>
-		[Property("stencil-bits")]
-		public uint StencilBits
-		{
-			get { return (_StencilBits); }
-			set { _StencilBits = value; }
-		}
-
-		/// <summary>
-		/// The OpenGL color buffer bits.
-		/// </summary>
-		private uint _StencilBits;
-
-		/// <summary>
-		/// Get or set the OpenGL minimum multisample buffer "bits".
-		/// </summary>
-		[Property("multisample-bits")]
-		public uint MultisampleBits
-		{
-			get { return (_MultisampleBits); }
-			set { _MultisampleBits = value; }
-		}
-
-		/// <summary>
-		/// The OpenGL multisample buffer bits.
-		/// </summary>
-		private uint _MultisampleBits;
-
-		/// <summary>
-		/// Get or set the OpenGL swap buffers interval.
-		/// </summary>
-		[Property("swap-interval")]
-		public int SwapInterval
-		{
-			get { return (_SwapInterval); }
-			set { _SwapInterval = value; }
-		}
-
-		/// <summary>
-		/// The OpenGL swap buffers interval.
-		/// </summary>
-		private int _SwapInterval = 1;
-
-		/// <summary>
-		/// The <see cref="DevicePixelFormat"/> describing the minimum pixel format required by this control.
-		/// </summary>
-		private DevicePixelFormat ControlPixelFormat
-		{
-			get
-			{
-				DevicePixelFormat controlReqFormat = new DevicePixelFormat();
-
-				controlReqFormat.RgbaUnsigned = true;
-				controlReqFormat.RenderWindow = true;
-
-				controlReqFormat.ColorBits = (int)ColorBits;
-				controlReqFormat.DepthBits = (int)DepthBits;
-				controlReqFormat.StencilBits = (int)StencilBits;
-				controlReqFormat.MultisampleBits = (int)MultisampleBits;
-				controlReqFormat.DoubleBuffer = true;
-
-				return (controlReqFormat);
-			}
-		}
-
-
-
-		#region Static attrs.
-        public bool HandleRendering { get; set; } = false;
+        public bool IsRenderHandler { get; set; } = false;
 
         #endregion
 
         #region Attributes
 
+        private IGraphicsContext _graphicsContext;
+        private IWindowInfo _windowInfo;
         private bool _initialized;
 
-		#endregion
+        #endregion
 
-		#region Properties
+        #region Properties
 
-		/// <summary>The major version of OpenGL to use.</summary>
-		public int GLVersionMajor { get; set; }
+        /// <summary>Use a single buffer versus a double buffer.</summary>
+        [Browsable(true)]
+        public bool SingleBuffer { get; set; }
 
-		/// <summary>The minor version of OpenGL to use.</summary>
-		public int GLVersionMinor { get; set; }
+        /// <summary>Color Buffer Bits-Per-Pixel</summary>
+        public int ColorBPP { get; set; }
 
-        private DeviceContext _deviceContext;
-        private IntPtr _graphicsContext;
-        private int _error;
+        /// <summary>Accumulation Buffer Bits-Per-Pixel</summary>
+        public int AccumulatorBPP { get; set; }
 
-		private IGraphicsContext _context;
-        private GLContext _gdkGlContext;
+        /// <summary>Depth Buffer Bits-Per-Pixel</summary>
+        public int DepthBPP { get; set; }
 
-        public bool ForwardCompatible { get; }
-        public DeviceContext DeviceContext { get => _deviceContext; set => _deviceContext = value; }
+        /// <summary>Stencil Buffer Bits-Per-Pixel</summary>
+        public int StencilBPP { get; set; }
+
+        /// <summary>Number of samples</summary>
+        public int Samples { get; set; }
+
+        /// <summary>Indicates if steropic renderering is enabled</summary>
+        public bool Stereo { get; set; }
+
+        /// <summary>The major version of OpenGL to use.</summary>
+        public int GLVersionMajor { get; set; }
+
+        /// <summary>The minor version of OpenGL to use.</summary>
+        public int GLVersionMinor { get; set; }
+
+        public GraphicsContextFlags GraphicsContextFlags
+        {
+            get;
+            set;
+        }
 
         #endregion
 
         #region Construction/Destruction
 
-        /// <summary>Constructs a new GLWidget</summary>
-        public GLWidget() : this(new Version(4, 0), true)
+        /// <summary>Constructs a new GLWidget.</summary>
+        public GLWidget()
+            : this(GraphicsMode.Default)
         {
-			/*this.ColorBits = 32;
-			this.DepthBits = 24;
-			this.StencilBits = 8;*/
+        }
+
+        /// <summary>Constructs a new GLWidget using a given GraphicsMode</summary>
+        public GLWidget(GraphicsMode graphicsMode)
+            : this(graphicsMode, 1, 0, GraphicsContextFlags.Default)
+        {
         }
 
         /// <summary>Constructs a new GLWidget</summary>
-        public GLWidget(Version apiVersion, bool forwardCompatible)
-		{
-            GLVersionMajor = apiVersion.Major;
-			GLVersionMinor = apiVersion.Minor;
-            ForwardCompatible = forwardCompatible;
-		}
+        public GLWidget(GraphicsMode graphicsMode, int glVersionMajor, int glVersionMinor, GraphicsContextFlags graphicsContextFlags)
+        {
+            SingleBuffer = graphicsMode.Buffers == 1;
+            ColorBPP = graphicsMode.ColorFormat.BitsPerPixel;
+            AccumulatorBPP = graphicsMode.AccumulatorFormat.BitsPerPixel;
+            DepthBPP = graphicsMode.Depth;
+            StencilBPP = graphicsMode.Stencil;
+            Samples = graphicsMode.Samples;
+            Stereo = graphicsMode.Stereo;
 
-		~GLWidget()
-		{
-			Dispose(false);
-		}
-		
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-			{
-				OnShuttingDown();
+            GLVersionMajor = glVersionMajor;
+            GLVersionMinor = glVersionMinor;
+            GraphicsContextFlags = graphicsContextFlags;
+        }
 
-				DeviceContext?.DeleteContext(_graphicsContext);
+        ~GLWidget()
+        {
+            Dispose(false);
+        }
 
-				DeviceContext?.Dispose();
+        public void MakeCurrent()
+        {
+            GraphicsContext.MakeCurrent(_windowInfo);
+        }
 
-                _gdkGlContext?.Dispose();
+        public void ClearCurrent()
+        {
+            GraphicsContext.MakeCurrent(null);
+        }
+
+        public void Swapbuffers()
+        {
+            GraphicsContext.SwapBuffers();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try
+                {
+                    GraphicsContext.MakeCurrent(WindowInfo);
+                }
+                catch (Exception ex)
+                {
+
+                }
+
+                OnShuttingDown();
+
+                if (OpenTK.Graphics.GraphicsContext.ShareContexts && (Interlocked.Decrement(ref _graphicsContextCount) == 0))
+                {
+                    OnGraphicsContextShuttingDown();
+                    _sharedContextInitialized = false;
+                }
+
+                GraphicsContext.Dispose();
             }
-		}
+        }
 
-		#endregion
+        #endregion
 
-		#region New Events
+        #region New Events
 
-		// Called when the first GraphicsContext is created in the case of GraphicsContext.ShareContexts == True;
-		public static event EventHandler GraphicsContextInitialized;
+        // Called when the first GraphicsContext is created in the case of GraphicsContext.ShareContexts == True;
+        public static event EventHandler GraphicsContextInitialized;
+
+        private static void OnGraphicsContextInitialized()
+        {
+            if (GraphicsContextInitialized != null)
+            {
+                GraphicsContextInitialized(null, EventArgs.Empty);
+            }
+        }
 
         // Called when the first GraphicsContext is being destroyed in the case of GraphicsContext.ShareContexts == True;
         public static event EventHandler GraphicsContextShuttingDown;
 
+        private static void OnGraphicsContextShuttingDown()
+        {
+            if (GraphicsContextShuttingDown != null)
+            {
+                GraphicsContextShuttingDown(null, EventArgs.Empty);
+            }
+        }
+
         // Called when this GLWidget has a valid GraphicsContext
         public event EventHandler Initialized;
 
-		protected virtual void OnInitialized()
-		{
-			if (Initialized != null)
-			{
-				Initialized(this, EventArgs.Empty);
-			}
-		}
-
-		// Called when this GLWidget needs to render a frame
-		public event EventHandler RenderFrame;
-
-		protected virtual void OnRenderFrame()
-		{
-            RenderFrame?.Invoke(this, EventArgs.Empty);
+        protected virtual void OnInitialized()
+        {
+            if (Initialized != null)
+            {
+                Initialized(this, EventArgs.Empty);
+            }
         }
 
-		// Called when this GLWidget is being Disposed
-		public event EventHandler ShuttingDown;
+        // Called when this GLWidget needs to render a frame
+        public event EventHandler RenderFrame;
 
-		protected virtual void OnShuttingDown()
-		{
-			if (ShuttingDown != null)
-			{
-				ShuttingDown(this, EventArgs.Empty);
-			}
-		}
+        protected virtual void OnRenderFrame()
+        {
+            if (RenderFrame != null)
+            {
+                RenderFrame(this, EventArgs.Empty);
+            }
+        }
 
-		#endregion
+        // Called when this GLWidget is being Disposed
+        public event EventHandler ShuttingDown;
 
-		// Called when the widget needs to be (fully or partially) redrawn.
+        protected virtual void OnShuttingDown()
+        {
+            if (ShuttingDown != null)
+            {
+                ShuttingDown(this, EventArgs.Empty);
+            }
+        }
 
-		protected override bool OnDrawn(Cairo.Context cr)
-		{
-			if (!_initialized)
-				Initialize();
+        #endregion
 
-			ClearCurrent();
+        // Called when a widget is realized. (window handles and such are valid)
+        // protected override void OnRealized() { base.OnRealized(); }
+
+        // Called when the widget needs to be (fully or partially) redrawn.
+
+        protected override bool OnDrawn(Cairo.Context cr)
+        {
+            if (!_initialized)
+                Initialize();
+            else if (!IsRenderHandler)
+                GraphicsContext.MakeCurrent(WindowInfo);
 
             return true;
-		}
-
-        public void Swapbuffers()
-        {
-            _context?.SwapBuffers();
         }
 
-		public void MakeCurrent()
-		{
-			ClearCurrent();
-
-			_context?.MakeCurrent();
-
-			_error = Marshal.GetLastWin32Error();
-		}
-
-        public void ClearCurrent()
-		{
-            if (GTKBindingHelper.CurrentPlatform == OSPlatform.Windows)
-            {
-                DeviceContext?.MakeCurrent(IntPtr.Zero);
-            }
-            else
-            {
-            	Gdk.GLContext.ClearCurrent();
-            }
-        }
-
-		private void CreateContext()
-		{
-			if (_graphicsContext != IntPtr.Zero)
-				throw new InvalidOperationException("context already created");
-
-			IntPtr sharingContext = IntPtr.Zero;
-
-			if (Gl.PlatformExtensions.CreateContext_ARB)
-			{
-				List<int> attributes = new List<int>();
-				uint contextProfile = 0, contextFlags = 0;
-				bool debuggerAttached = Debugger.IsAttached;
-
-				#region WGL_ARB_create_context|GLX_ARB_create_context
-
-				#endregion
-
-				#region WGL_ARB_create_context_profile|GLX_ARB_create_context_profile
-
-				if (Gl.PlatformExtensions.CreateContextProfile_ARB)
-				{
-
-				}
-
-				#endregion
-
-				#region WGL_ARB_create_context_robustness|GLX_ARB_create_context_robustness
-
-				if (Gl.PlatformExtensions.CreateContextRobustness_ARB)
-				{
-
-				}
-
-				#endregion
-
-				Debug.Assert(Wgl.CONTEXT_FLAGS_ARB == Glx.CONTEXT_FLAGS_ARB);
-				if (contextFlags != 0)
-					attributes.AddRange(new int[] { Wgl.CONTEXT_FLAGS_ARB, unchecked((int)contextFlags) });
-
-				Debug.Assert(Wgl.CONTEXT_PROFILE_MASK_ARB == Glx.CONTEXT_PROFILE_MASK_ARB);
-				Debug.Assert(contextProfile == 0 || Gl.PlatformExtensions.CreateContextProfile_ARB);
-				if (contextProfile != 0)
-					attributes.AddRange(new int[] { Wgl.CONTEXT_PROFILE_MASK_ARB, unchecked((int)contextProfile) });
-
-				attributes.Add(0);
-
-				if ((_graphicsContext = _deviceContext.CreateContextAttrib(sharingContext, attributes.ToArray())) == IntPtr.Zero)
-					throw new InvalidOperationException(String.Format("unable to create render context ({0})", Gl.GetError()));
-			}
-			else
-			{
-				// Create OpenGL context using compatibility profile
-				if ((_graphicsContext = _deviceContext.CreateContext(sharingContext)) == IntPtr.Zero)
-					throw new InvalidOperationException("unable to create render context");
-			}
-		}
-
-		private void CreateDeviceContext(DevicePixelFormat controlReqFormat)
-		{
-			#region Create device context
-
-			DeviceContext = DeviceContext.Create(GTKBindingHelper.GetDisplayHandle(Display.Handle), GTKBindingHelper.GetWindowHandle(Window.Handle));
-			DeviceContext.IncRef();
-
-			#endregion
-
-			#region Set pixel format
-
-			DevicePixelFormatCollection pixelFormats = DeviceContext.PixelsFormats;
-			List<DevicePixelFormat> matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
-
-			if ((matchingPixelFormats.Count == 0) && controlReqFormat.MultisampleBits > 0)
-			{
-				// Try to select the maximum multisample configuration
-				int multisampleBits = 0;
-
-				pixelFormats.ForEach(delegate (DevicePixelFormat item) { multisampleBits = Math.Max(multisampleBits, item.MultisampleBits); });
-
-				controlReqFormat.MultisampleBits = multisampleBits;
-
-				matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
-			}
-
-			if ((matchingPixelFormats.Count == 0) && controlReqFormat.DoubleBuffer)
-			{
-				// Try single buffered pixel formats
-				controlReqFormat.DoubleBuffer = false;
-
-				matchingPixelFormats = pixelFormats.Choose(controlReqFormat);
-				if (matchingPixelFormats.Count == 0)
-					throw new InvalidOperationException(String.Format("unable to find a suitable pixel format: {0}", pixelFormats.GuessChooseError(controlReqFormat)));
-			}
-			else if (matchingPixelFormats.Count == 0)
-				throw new InvalidOperationException(String.Format("unable to find a suitable pixel format: {0}", pixelFormats.GuessChooseError(controlReqFormat)));
-
-			DeviceContext.SetPixelFormat(matchingPixelFormats[0]);
-
-			#endregion
-
-			#region Set V-Sync
-
-			if (Gl.PlatformExtensions.SwapControl)
-			{
-				int swapInterval = SwapInterval;
-
-				// Mask value in case it is not supported
-				if (!Gl.PlatformExtensions.SwapControlTear && swapInterval == -1)
-					swapInterval = 1;
-
-				DeviceContext.SwapInterval(swapInterval);
-			}
-
-			#endregion
-		}
-
-        private void CreateGdkGlContext()
+        // Called on Resize
+        protected override bool OnConfigureEvent(Gdk.EventConfigure evnt)
         {
-            _gdkGlContext = Window.CreateGlContext();
+            if (GraphicsContext != null)
+            {
+                GraphicsContext.Update(WindowInfo);
+            }
 
-            _gdkGlContext.SetRequiredVersion(GLVersionMajor, GLVersionMinor);
-
-            _gdkGlContext.ForwardCompatible = ForwardCompatible;
-
-            _gdkGlContext.SetUseEs(0);
-
-            _gdkGlContext.Realize();
-
-            _gdkGlContext.MakeCurrent();
+            return true;
         }
 
         private void Initialize()
-		{
-			ClearCurrent();
+        {
+            _initialized = true;
 
-            Khronos.KhronosApi.LogEnabled = true;
-
-			Window.EnsureNative();
-
-            if (GTKBindingHelper.CurrentPlatform == OSPlatform.Windows)
+            // If this looks uninitialized...  initialize.
+            if (ColorBPP == 0)
             {
-                CreateDeviceContext(ControlPixelFormat);
+                ColorBPP = 32;
 
-                CreateContext();
-
-                DeviceContext.MakeCurrent(_graphicsContext);
-            }
-			else {
-                GraphicsContext.Display = Display.Handle;
-
-                CreateGdkGlContext();
+                if (DepthBPP == 0)
+                {
+                    DepthBPP = 16;
+                }
             }
 
-			_context = GraphicsContext.GetCurrentContext(Window.Handle);
+            ColorFormat colorBufferColorFormat = new ColorFormat(ColorBPP);
 
-			MakeCurrent();
+            ColorFormat accumulationColorFormat = new ColorFormat(AccumulatorBPP);
 
-			GTKBindingHelper.InitializeGlBindings();
+            int buffers = 2;
+            if (SingleBuffer)
+            {
+                buffers--;
+            }
+
+            GraphicsMode graphicsMode = new GraphicsMode(colorBufferColorFormat, DepthBPP, StencilBPP, Samples, accumulationColorFormat, buffers, Stereo);
+
+            this.Window.EnsureNative();
+
+            // IWindowInfo
+            if (OpenTK.Configuration.RunningOnWindows)
+            {
+                WindowInfo = InitializeWindows();
+            }
+            else if (OpenTK.Configuration.RunningOnMacOS)
+            {
+                WindowInfo = InitializeOSX();
+            }
+            else
+            {
+                WindowInfo = InitializeX(graphicsMode);
+            }
+
+            // GraphicsContext
+            GraphicsContext = new GraphicsContext(graphicsMode, WindowInfo, GLVersionMajor, GLVersionMinor, GraphicsContextFlags);
+            GraphicsContext.MakeCurrent(WindowInfo);
+
+            if (OpenTK.Graphics.GraphicsContext.ShareContexts)
+            {
+                Interlocked.Increment(ref _graphicsContextCount);
+
+                if (!_sharedContextInitialized)
+                {
+                    _sharedContextInitialized = true;
+                    ((IGraphicsContextInternal)GraphicsContext).LoadAll();
+                    OnGraphicsContextInitialized();
+                }
+            }
+            else
+            {
+                ((IGraphicsContextInternal)GraphicsContext).LoadAll();
+                OnGraphicsContextInitialized();
+            }
 
             OnInitialized();
+        }
 
-			OpenTK.GraphicsContext.GetCurrentContext(Window.Handle).SwapInterval(1);
+        #region Windows Specific initalization
 
-			ClearCurrent();
+        IWindowInfo InitializeWindows()
+        {
+            IntPtr windowHandle = gdk_win32_window_get_handle(this.Window.Handle);
+            return Utilities.CreateWindowsWindowInfo(windowHandle);
+        }
 
-			_initialized = true;
+        [SuppressUnmanagedCodeSecurity, DllImport("libgdk-3-0.dll")]
+        public static extern IntPtr gdk_win32_window_get_handle(IntPtr d);
 
-		}
-	}
+        #endregion
+
+        #region OSX Specific Initialization
+
+        IWindowInfo InitializeOSX()
+        {
+            IntPtr windowHandle = gdk_quartz_window_get_nswindow(this.Window.Handle);
+            //IntPtr viewHandle = gdk_quartz_window_get_nsview(this.GdkWindow.Handle);
+            return Utilities.CreateMacOSWindowInfo(windowHandle);
+        }
+
+        [SuppressUnmanagedCodeSecurity, DllImport("libgdk-3.0.dylib")]
+        static extern IntPtr gdk_quartz_window_get_nswindow(IntPtr handle);
+
+        [SuppressUnmanagedCodeSecurity, DllImport("libgdk-3.0.dylib")]
+        static extern IntPtr gdk_quartz_window_get_nsview(IntPtr handle);
+
+        #endregion
+
+        #region X Specific Initialization
+
+        const string UnixLibGdkName = "libgdk-3.so.0";
+
+        const string UnixLibX11Name = "libX11.so.6";
+        const string UnixLibGLName = "libGL.so.1";
+
+        const int GLX_NONE = 0;
+        const int GLX_USE_GL = 1;
+        const int GLX_BUFFER_SIZE = 2;
+        const int GLX_LEVEL = 3;
+        const int GLX_RGBA = 4;
+        const int GLX_DOUBLEBUFFER = 5;
+        const int GLX_STEREO = 6;
+        const int GLX_AUX_BUFFERS = 7;
+        const int GLX_RED_SIZE = 8;
+        const int GLX_GREEN_SIZE = 9;
+        const int GLX_BLUE_SIZE = 10;
+        const int GLX_ALPHA_SIZE = 11;
+        const int GLX_DEPTH_SIZE = 12;
+        const int GLX_STENCIL_SIZE = 13;
+        const int GLX_ACCUM_RED_SIZE = 14;
+        const int GLX_ACCUM_GREEN_SIZE = 15;
+        const int GLX_ACCUM_BLUE_SIZE = 16;
+        const int GLX_ACCUM_ALPHA_SIZE = 17;
+
+        public enum XVisualClass
+        {
+            StaticGray = 0,
+            GrayScale = 1,
+            StaticColor = 2,
+            PseudoColor = 3,
+            TrueColor = 4,
+            DirectColor = 5,
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct XVisualInfo
+        {
+            public IntPtr Visual;
+            public IntPtr VisualID;
+            public int Screen;
+            public int Depth;
+            public XVisualClass Class;
+            public long RedMask;
+            public long GreenMask;
+            public long blueMask;
+            public int ColormapSize;
+            public int BitsPerRgb;
+
+            public override string ToString()
+            {
+                return $"id ({VisualID}), screen ({Screen}), depth ({Depth}), class ({Class})";
+            }
+        }
+
+        [Flags]
+        internal enum XVisualInfoMask
+        {
+            No = 0x0,
+            ID = 0x1,
+            Screen = 0x2,
+            Depth = 0x4,
+            Class = 0x8,
+            Red = 0x10,
+            Green = 0x20,
+            Blue = 0x40,
+            ColormapSize = 0x80,
+            BitsPerRGB = 0x100,
+            All = 0x1FF,
+        }
+
+        private IWindowInfo InitializeX(GraphicsMode mode)
+        {
+            IntPtr display = gdk_x11_display_get_xdisplay(Display.Handle);
+            int screen = Screen.Number;
+
+            IntPtr windowHandle = gdk_x11_window_get_xid(Window.Handle);
+            IntPtr rootWindow = gdk_x11_window_get_xid(RootWindow.Handle);
+
+            IntPtr visualInfo;
+
+            if (mode.Index.HasValue)
+            {
+                XVisualInfo info = new XVisualInfo();
+                info.VisualID = mode.Index.Value;
+                int dummy;
+                visualInfo = XGetVisualInfo(display, XVisualInfoMask.ID, ref info, out dummy);
+            }
+            else
+            {
+                visualInfo = GetVisualInfo(display);
+            }
+
+            IWindowInfo retval = Utilities.CreateX11WindowInfo(display, screen, windowHandle, rootWindow, visualInfo);
+            XFree(visualInfo);
+
+            return retval;
+        }
+
+        private static IntPtr XGetVisualInfo(IntPtr display, XVisualInfoMask vinfo_mask, ref XVisualInfo template, out int nitems)
+        {
+            return XGetVisualInfoInternal(display, (IntPtr)(int)vinfo_mask, ref template, out nitems);
+        }
+
+        private IntPtr GetVisualInfo(IntPtr display)
+        {
+            try
+            {
+                int[] attributes = AttributeList.ToArray();
+                return glXChooseVisual(display, Screen.Number, attributes);
+            }
+            catch (DllNotFoundException e)
+            {
+                throw new DllNotFoundException("OpenGL dll not found!", e);
+            }
+            catch (EntryPointNotFoundException enf)
+            {
+                throw new EntryPointNotFoundException("Glx entry point not found!", enf);
+            }
+        }
+
+        private List<int> AttributeList
+        {
+            get
+            {
+                List<int> attributeList = new List<int>(24);
+
+                attributeList.Add(GLX_RGBA);
+
+                if (!SingleBuffer)
+                    attributeList.Add(GLX_DOUBLEBUFFER);
+
+                if (Stereo)
+                    attributeList.Add(GLX_STEREO);
+
+                attributeList.Add(GLX_RED_SIZE);
+                attributeList.Add(ColorBPP / 4); // TODO support 16-bit
+
+                attributeList.Add(GLX_GREEN_SIZE);
+                attributeList.Add(ColorBPP / 4); // TODO support 16-bit
+
+                attributeList.Add(GLX_BLUE_SIZE);
+                attributeList.Add(ColorBPP / 4); // TODO support 16-bit
+
+                attributeList.Add(GLX_ALPHA_SIZE);
+                attributeList.Add(ColorBPP / 4); // TODO support 16-bit
+
+                attributeList.Add(GLX_DEPTH_SIZE);
+                attributeList.Add(DepthBPP);
+
+                attributeList.Add(GLX_STENCIL_SIZE);
+                attributeList.Add(StencilBPP);
+
+                attributeList.Add(GLX_ACCUM_RED_SIZE);
+                attributeList.Add(AccumulatorBPP / 4);// TODO support 16-bit
+
+                attributeList.Add(GLX_ACCUM_GREEN_SIZE);
+                attributeList.Add(AccumulatorBPP / 4);// TODO support 16-bit
+
+                attributeList.Add(GLX_ACCUM_BLUE_SIZE);
+                attributeList.Add(AccumulatorBPP / 4);// TODO support 16-bit
+
+                attributeList.Add(GLX_ACCUM_ALPHA_SIZE);
+                attributeList.Add(AccumulatorBPP / 4);// TODO support 16-bit
+
+                attributeList.Add(GLX_NONE);
+
+                return attributeList;
+            }
+        }
+
+        public IGraphicsContext GraphicsContext { get => _graphicsContext; set => _graphicsContext = value; }
+        public IWindowInfo WindowInfo { get => _windowInfo; set => _windowInfo = value; }
+
+        [DllImport(UnixLibX11Name, EntryPoint = "XGetVisualInfo")]
+        private static extern IntPtr XGetVisualInfoInternal(IntPtr display, IntPtr vinfo_mask, ref XVisualInfo template, out int nitems);
+
+        [SuppressUnmanagedCodeSecurity, DllImport(UnixLibX11Name)]
+        private static extern void XFree(IntPtr handle);
+
+        /// <summary> Returns the X resource (window or pixmap) belonging to a GdkDrawable. </summary>
+        /// <remarks> XID gdk_x11_drawable_get_xid(GdkDrawable *drawable); </remarks>
+        /// <param name="gdkDisplay"> The GdkDrawable. </param>
+        /// <returns> The ID of drawable's X resource. </returns>
+        [SuppressUnmanagedCodeSecurity, DllImport(UnixLibGdkName)]
+        private static extern IntPtr gdk_x11_drawable_get_xid(IntPtr gdkDisplay);
+
+        /// <summary> Returns the X resource (window or pixmap) belonging to a GdkDrawable. </summary>
+        /// <remarks> XID gdk_x11_drawable_get_xid(GdkDrawable *drawable); </remarks>
+        /// <param name="gdkDisplay"> The GdkDrawable. </param>
+        /// <returns> The ID of drawable's X resource. </returns>
+        [SuppressUnmanagedCodeSecurity, DllImport(UnixLibGdkName)]
+        private static extern IntPtr gdk_x11_window_get_xid(IntPtr gdkDisplay);
+
+        /// <summary> Returns the X display of a GdkDisplay. </summary>
+        /// <remarks> Display* gdk_x11_display_get_xdisplay(GdkDisplay *display); </remarks>
+        /// <param name="gdkDisplay"> The GdkDrawable. </param>
+        /// <returns> The X Display of the GdkDisplay. </returns>
+        [SuppressUnmanagedCodeSecurity, DllImport(UnixLibGdkName)]
+        private static extern IntPtr gdk_x11_display_get_xdisplay(IntPtr gdkDisplay);
+
+        [SuppressUnmanagedCodeSecurity, DllImport(UnixLibGLName)]
+        private static extern IntPtr glXChooseVisual(IntPtr display, int screen, int[] attr);
+
+        #endregion
+    }
 }

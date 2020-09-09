@@ -35,6 +35,7 @@ using OpenTK;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL;
 using KeyPressEventArgs = Gtk.KeyPressEventArgs;
+using OpenTK.Graphics;
 
 namespace GLWidgetTestGTK3
 {
@@ -133,11 +134,17 @@ namespace GLWidgetTestGTK3
 			this.GLInit = false;
 			ResetCamera();
 
-			this.MainGLWidget = new GLWidget()
-			{
-				GLVersionMajor = 3,
-				GLVersionMinor = 3,
-			};
+            this.MainGLWidget = new GLWidget(GraphicsMode.Default)
+            {
+                CanFocus = true,
+                SingleBuffer = false,
+                ColorBPP = 24,
+                DepthBPP = 24,
+                Samples = 4,
+                GLVersionMajor = 3,
+                GLVersionMinor = 3,
+                GraphicsContextFlags = GraphicsContextFlags.Default
+            };
 
 			this.MainGLWidget.Events |=
 				EventMask.ButtonPressMask |

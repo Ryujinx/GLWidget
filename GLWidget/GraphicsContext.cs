@@ -6,7 +6,7 @@ using static OpenTK.GTKBindingHelper;
 
 namespace OpenTK
 {
-    public interface IGraphicsContext
+    public interface ILegacyGraphicsContext
     {
         void MakeCurrent();
         void SwapBuffers();
@@ -14,7 +14,7 @@ namespace OpenTK
         void SwapInterval(int interval);
     }
 
-    public abstract class GraphicsContext : IGraphicsContext
+    public abstract class LegacyGraphicsContext : ILegacyGraphicsContext
     {
         public static IntPtr Display{ get; set; }
 
@@ -40,7 +40,7 @@ namespace OpenTK
             }
         }
 
-        public static IGraphicsContext GetCurrentContext(IntPtr handle)
+        public static ILegacyGraphicsContext GetCurrentContext(IntPtr handle)
         {
             var currentPlatform = CurrentPlatform;
 
@@ -66,7 +66,7 @@ namespace OpenTK
         public abstract void SwapInterval(int interval);
     }
 
-    public class WglGraphicsContext : GraphicsContext
+    public class WglGraphicsContext : LegacyGraphicsContext
     {
         private delegate int wglSwapIntervalExtDelegate(int interval);
         private static wglSwapIntervalExtDelegate wglSwapIntervalExt = null;
@@ -120,7 +120,7 @@ namespace OpenTK
         }
     }
 
-    public class GlxGraphicsContext : GraphicsContext
+    public class GlxGraphicsContext : LegacyGraphicsContext
     {
         private IntPtr _windowHandle;
 
@@ -162,7 +162,7 @@ namespace OpenTK
         }
     }
 
-    public class CglGraphicsContext : GraphicsContext
+    public class CglGraphicsContext : LegacyGraphicsContext
     {
         private IntPtr _windowHandle;
 
