@@ -15,7 +15,7 @@ namespace OpenTK.Platform.Windows
         private static IntPtr[] EntryPoints;
         private static string[] EntryPointNames;
 
-        internal const string Library = "OPENGL32.DLL";
+        internal const string Library = "opengl32.dll";
 
         private readonly static Dictionary<string, bool> extensions =
             new Dictionary<string, bool>();

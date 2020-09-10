@@ -155,6 +155,7 @@ namespace OpenTK
 
         public void ClearCurrent()
         {
+            Gdk.GLContext.ClearCurrent();
             GraphicsContext.MakeCurrent(null);
         }
 
@@ -169,7 +170,7 @@ namespace OpenTK
             {
                 try
                 {
-                    GraphicsContext.MakeCurrent(WindowInfo);
+                    MakeCurrent();
                 }
                 catch (Exception ex)
                 {
@@ -259,7 +260,7 @@ namespace OpenTK
             if (!_initialized)
                 Initialize();
             else if (!IsRenderHandler)
-                GraphicsContext.MakeCurrent(WindowInfo);
+                MakeCurrent();
 
             return true;
         }
@@ -277,6 +278,8 @@ namespace OpenTK
 
         private void Initialize()
         {
+            Toolkit.Init();
+
             _initialized = true;
 
             Gdk.GLContext.ClearCurrent();
@@ -302,7 +305,7 @@ namespace OpenTK
                 buffers--;
             }
 
-            GraphicsMode graphicsMode = new GraphicsMode(colorBufferColorFormat, DepthBPP, StencilBPP, Samples, accumulationColorFormat, buffers, Stereo);
+            GraphicsMode graphicsMode = GraphicsMode.Default;//new GraphicsMode(colorBufferColorFormat, DepthBPP, StencilBPP, Samples, accumulationColorFormat, buffers, Stereo);
 
             this.Window.EnsureNative();
 
@@ -322,7 +325,7 @@ namespace OpenTK
 
             // GraphicsContext
             GraphicsContext = new GraphicsContext(graphicsMode, WindowInfo, GLVersionMajor, GLVersionMinor, GraphicsContextFlags);
-            GraphicsContext.MakeCurrent(WindowInfo);
+            MakeCurrent();
 
             if (OpenTK.Graphics.GraphicsContext.ShareContexts)
             {
@@ -344,6 +347,11 @@ namespace OpenTK
             GraphicsContext.SwapInterval = SwapInterval;
 
             var swap = GraphicsContext.SwapInterval;
+
+            GTKBindingHelper.InitializeGlBindings();
+
+            ClearCurrent();
+            MakeCurrent();
 
             OnInitialized();
         }

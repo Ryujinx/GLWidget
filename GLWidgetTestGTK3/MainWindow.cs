@@ -143,7 +143,8 @@ namespace GLWidgetTestGTK3
                 Samples = 4,
                 GLVersionMajor = 3,
                 GLVersionMinor = 3,
-                GraphicsContextFlags = GraphicsContextFlags.Default
+                GraphicsContextFlags = GraphicsContextFlags.ForwardCompatible | GraphicsContextFlags.Debug,
+				IsRenderHandler = true
             };
 
 			this.MainGLWidget.Events |=
@@ -350,6 +351,8 @@ namespace GLWidgetTestGTK3
 			// Add idle event handler to process rendering whenever and as long as time is available.
 			GLInit = true;
 			//GLib.Idle.Add(OnIdleProcessMain);
+
+			MainGLWidget.ClearCurrent();
 
 			System.Threading.Thread thread = new System.Threading.Thread(Start);
 			thread.Start();

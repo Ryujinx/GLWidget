@@ -396,7 +396,9 @@ namespace OpenTK.Platform.Windows
 
             Debug.WriteLine(mode.Index.ToString());
 
-            if (!Functions.SetPixelFormat(window.DeviceContext, (int)mode.Index.Value, ref pfd))
+            var index = Functions.ChoosePixelFormat(window.DeviceContext, ref pfd);
+
+            if (!Functions.SetPixelFormat(window.DeviceContext, index, ref pfd))
             {
                 throw new GraphicsContextException(String.Format(
                     "Requested GraphicsMode not available. SetPixelFormat error: {0}",
