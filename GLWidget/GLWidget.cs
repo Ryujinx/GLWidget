@@ -59,6 +59,7 @@ namespace OpenTK
         private IGraphicsContext _graphicsContext;
         private IWindowInfo _windowInfo;
         private bool _initialized;
+        private int swapInterval = 0;
 
         #endregion
 
@@ -92,6 +93,18 @@ namespace OpenTK
         /// <summary>The minor version of OpenGL to use.</summary>
         public int GLVersionMinor { get; set; }
 
+        public int SwapInterval
+        {
+            get => swapInterval; set
+            {
+                swapInterval = value;
+
+                if (GraphicsContext != null)
+                {
+                    GraphicsContext.SwapInterval = value;
+                }
+            }
+        }
         public GraphicsContextFlags GraphicsContextFlags
         {
             get;
@@ -266,6 +279,8 @@ namespace OpenTK
         {
             _initialized = true;
 
+            Gdk.GLContext.ClearCurrent();
+
             // If this looks uninitialized...  initialize.
             if (ColorBPP == 0)
             {
@@ -325,6 +340,10 @@ namespace OpenTK
                 ((IGraphicsContextInternal)GraphicsContext).LoadAll();
                 OnGraphicsContextInitialized();
             }
+
+            GraphicsContext.SwapInterval = SwapInterval;
+
+            var swap = GraphicsContext.SwapInterval;
 
             OnInitialized();
         }

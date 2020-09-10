@@ -186,11 +186,11 @@ namespace OpenTK.Platform.X11
                 {
                     fixed (int* attribs_ptr = attributes.ToArray())
                     {
-                        context = Glx.Arb.glXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, direct, attribs_ptr);
+                        context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, direct, attribs_ptr);
                         if (context == IntPtr.Zero)
                         {
                             Debug.Write(String.Format("failed. Trying direct: {0}... ", !direct));
-                            context = Glx.Arb.glXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, !direct, attribs_ptr);
+                            context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, !direct, attribs_ptr);
                         }
                     }
                 }
@@ -390,7 +390,7 @@ namespace OpenTK.Platform.X11
                     }
                     else if (vsync_mesa_supported)
                     {
-                        return OpenGL.Glx.GetSwapIntervalMESA();
+                        return Glx.glXGetSwapIntervalMESA();
                     }
                     else if (vsync_sgi_supported)
                     {
@@ -418,15 +418,15 @@ namespace OpenTK.Platform.X11
                 {
                     if (vsync_ext_supported)
                     {
-                        OpenGL.Glx.SwapIntervalEXT(Display, currentWindow.Handle, value);
+                        Glx.glXSwapIntervalEXT(Display, currentWindow.Handle, value);
                     }
                     else if (vsync_mesa_supported)
                     {
-                        error_code = (ErrorCode)OpenGL.Glx.SwapIntervalMESA((uint)value);
+                        error_code = (ErrorCode)Glx.glXSwapIntervalMESA((uint)value);
                     }
                     else if (vsync_sgi_supported)
                     {
-                        error_code = (ErrorCode)OpenGL.Glx.SwapIntervalSGI(value);
+                        error_code = (ErrorCode)Glx.glXSwapIntervalMESA((uint)value);
                     }
                 }
 
@@ -462,7 +462,7 @@ namespace OpenTK.Platform.X11
             Debug.Print("Context supports adaptive vsync: {0}.",
                 vsync_tear_supported);
 
-            base.LoadAll();
+            GTKBindingHelper.InitializeGlBindings();
         }
 
         public override IntPtr GetAddress(IntPtr function)

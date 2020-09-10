@@ -41,39 +41,8 @@ namespace OpenTK.Platform
 
             Stopwatch time = Stopwatch.StartNew();
 
-            Assembly assembly;
-            try
-            {
-                assembly = Assembly.Load("OpenTK.Graphics");
-            }
-            catch
-            {
-                // Failed to load graphics, oh well.
-                // Up to the user I guess?
-                // TODO: Should we expose this load failure to the user better?
-                return;
-            }
-
-            var provider = new GTKBindingHelper();
-
-            void LoadBindings(string typeNamespace)
-            {
-                var type = assembly.GetType($"OpenTK.Graphics.{typeNamespace}.GL");
-                if (type == null)
-                {
-                    return;
-                }
-
-                var load = type.GetMethod("LoadBindings");
-                load.Invoke(null, new object[] { provider });
-            }
-
-            LoadBindings("ES11");
-            LoadBindings("ES20");
-            LoadBindings("ES30");
-            LoadBindings("OpenGL");
-            LoadBindings("OpenGL4");
-
+            GTKBindingHelper.InitializeGlBindings();
+            
             Debug.Print("Bindings loaded in {0} ms.", time.Elapsed.TotalMilliseconds);
         }
     }

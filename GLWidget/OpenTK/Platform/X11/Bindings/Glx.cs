@@ -253,7 +253,7 @@ namespace OpenTK.Platform.X11
     /// <summary>
     /// Provides access to GLX functions.
     /// </summary>
-    internal class Glx : Graphics.GraphicsBindingsBase
+    internal unsafe class Glx : Graphics.GraphicsBindingsBase
     {
         private const string Library = "libGL.so.1";
         private static readonly object sync_root = new object();
@@ -314,31 +314,45 @@ namespace OpenTK.Platform.X11
                 {
                     for (int i = 0; i < _EntryPointsInstance.Length; i++)
                     {
-                        _EntryPointsInstance[i] = Arb.GetProcAddress(new IntPtr(name + _EntryPointNameOffsetsInstance[i]));
+                        _EntryPointsInstance[i] = GetProcAddressARB(new IntPtr(name + _EntryPointNameOffsetsInstance[i]));
                     }
                 }
             }
 
-            IntPtr pointer = Arb.GetProcAddress("glXCreateContextAttribsARB");
+            IntPtr pointer = GetProcAddressARB("glXCreateContextAttribsARB");
 
             if (pointer != null && pointer != IntPtr.Zero)
             {
-                Arb.glXCreateContextAttribsARB = (Arb.CreateContextAttribsARB)Marshal.GetDelegateForFunctionPointer(
-                        pointer, typeof(Arb.CreateContextAttribsARB));
+                pglXCreateContextAttribsARB = (glXCreateContextAttribsARB)Marshal.GetDelegateForFunctionPointer(
+                        pointer, typeof(glXCreateContextAttribsARB));
             }
+
+            glXSwapIntervalEXT = GetProcAddress<SwapIntervalEXT>("glXSwapIntervalEXT");
+            glXSwapIntervalMESA = GetProcAddress<SwapIntervalMESA>("glXSwapIntervalMESA");
+            glXGetSwapIntervalMESA = GetProcAddress<GetSwapIntervalMESA>("glXGetSwapIntervalMESA");
+            glXSwapIntervalSGI = GetProcAddress<SwapIntervalSGI>("glXSwapIntervalSGI");
         }
 
-        public partial class Arb
-        {
-            [DllImport(Library, EntryPoint = "glXGetProcAddressARB")]
-            public static extern IntPtr GetProcAddress([MarshalAs(UnmanagedType.LPTStr)] string procName);
+        [DllImport(Library, EntryPoint = "glXGetProcAddressARB")]
+        public static extern IntPtr GetProcAddressARB([MarshalAs(UnmanagedType.LPTStr)] string procName);
 
-            [DllImport(Library, EntryPoint = "glXGetProcAddressARB")]
-            public static extern IntPtr GetProcAddress(IntPtr procName);
+        [DllImport(Library, EntryPoint = "glXGetProcAddressARB")]
+        public static extern IntPtr GetProcAddressARB(IntPtr procName);
 
-            public unsafe delegate IntPtr CreateContextAttribsARB(IntPtr display, IntPtr fbconfig, IntPtr share_context, bool direct, int* attribs);
-            public static unsafe CreateContextAttribsARB glXCreateContextAttribsARB = null;
-        }
+        internal delegate IntPtr glXCreateContextAttribsARB(IntPtr dpy, IntPtr config, IntPtr share_context, bool direct, int* attrib_list);
+        internal static glXCreateContextAttribsARB pglXCreateContextAttribsARB;
+
+        public delegate void SwapIntervalEXT(IntPtr dpy, IntPtr drawable, int interval);
+        public static SwapIntervalEXT glXSwapIntervalEXT;
+
+        public delegate int SwapIntervalMESA(uint interval);
+        public static SwapIntervalMESA glXSwapIntervalMESA;
+        
+        public delegate int GetSwapIntervalMESA();
+        public static GetSwapIntervalMESA glXGetSwapIntervalMESA;
+
+        public delegate int SwapIntervalSGI(int interval);
+        public static SwapIntervalSGI glXSwapIntervalSGI;
 
         internal static bool SupportsFunction(string name)
         {
@@ -423,6 +437,12 @@ namespace OpenTK.Platform.X11
                 }
             }
         }
+        public static TDelegate GetProcAddress<TDelegate>(string name) where TDelegate : class
+        {
+            IntPtr addr = GetProcAddress(name);
+            if (addr == IntPtr.Zero) return null;
+            return (TDelegate)(object)System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer(addr, typeof(TDelegate));
+        }
 
         // Returns an array of GLXFBConfig structures.
         [DllImport(Library, EntryPoint = "glXChooseFBConfig")]
@@ -430,23 +450,7 @@ namespace OpenTK.Platform.X11
 
         // Returns a pointer to an XVisualInfo structure.
         [DllImport(Library, EntryPoint = "glXGetVisualFromFBConfig")]
-        public unsafe extern static IntPtr GetVisualFromFBConfig(IntPtr dpy, IntPtr fbconfig);
-
-        [Slot(0)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
-        internal unsafe static extern IntPtr glXCreateContextAttribsARB(IntPtr display, IntPtr fbconfig, IntPtr share_context, bool direct, int* attribs);
-        [Slot(1)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern ErrorCode glXSwapIntervalEXT(IntPtr display, IntPtr drawable, int interval);
-        [Slot(2)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern ErrorCode glXSwapIntervalMESA(int interval);
-        [Slot(3)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int glXGetSwapIntervalMESA();
-        [Slot(4)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern ErrorCode glXSwapIntervalSGI(int interval);
+        public unsafe extern static IntPtr GetVisualFromFBConfig(IntPtr dpy, IntPtr fbconfig);        
     }
 }
 
