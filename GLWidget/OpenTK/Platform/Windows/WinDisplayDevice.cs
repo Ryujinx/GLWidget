@@ -41,33 +41,6 @@ namespace OpenTK.Platform.Windows
                 HandleDisplaySettingsChanged;
         }
 
-        public sealed override bool TryChangeResolution(DisplayDevice device, DisplayResolution resolution)
-        {
-            DeviceMode mode = null;
-
-            if (resolution != null)
-            {
-                mode = new DeviceMode();
-                mode.PelsWidth = resolution.Width;
-                mode.PelsHeight = resolution.Height;
-                mode.BitsPerPel = resolution.BitsPerPixel;
-                mode.DisplayFrequency = (int)resolution.RefreshRate;
-                mode.Fields = Constants.DM_BITSPERPEL
-                    | Constants.DM_PELSWIDTH
-                    | Constants.DM_PELSHEIGHT
-                    | Constants.DM_DISPLAYFREQUENCY;
-            }
-
-            return Constants.DISP_CHANGE_SUCCESSFUL ==
-                Functions.ChangeDisplaySettingsEx((string)device.Id, mode, IntPtr.Zero,
-                    ChangeDisplaySettingsEnum.Fullscreen, IntPtr.Zero);
-        }
-
-        public sealed override bool TryRestoreResolution(DisplayDevice device)
-        {
-            return TryChangeResolution(device, null);
-        }
-
         public void RefreshDisplayDevices()
         {
             lock (display_lock)

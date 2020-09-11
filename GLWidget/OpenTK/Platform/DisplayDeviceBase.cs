@@ -38,9 +38,6 @@ namespace OpenTK.Platform
         protected readonly List<DisplayDevice> AvailableDevices = new List<DisplayDevice>();
         protected DisplayDevice Primary;
 
-        public abstract bool TryChangeResolution(DisplayDevice device, DisplayResolution resolution);
-        public abstract bool TryRestoreResolution(DisplayDevice device);
-
         // Gets the DisplayDevice that corresponds to the specified index.
         public virtual DisplayDevice GetDisplay(DisplayIndex index)
         {

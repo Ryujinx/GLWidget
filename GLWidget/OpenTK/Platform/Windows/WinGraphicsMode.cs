@@ -184,10 +184,10 @@ namespace OpenTK.Platform.Windows
                     attributes.Add(0);
                     attributes.Add(0);
 
-                    uint[] count = new uint[attributes.Count];
+                    uint count = (uint)attributes.Count;
 
-                    if (OpenGL.Wgl.ChoosePixelFormatARB(device, attributes.ToArray(), null, (uint)format.Length, format, count)
-                        && count.Length > 0)
+                    if (Wgl.wglChoosePixelFormatARB(device, attributes.ToArray(), null, (uint)format.Length, format, ref count)
+                        && count > 0)
                     {
                         created_mode = DescribePixelFormatARB(device, format[0]);
                         retry = false;
@@ -377,7 +377,7 @@ namespace OpenTK.Platform.Windows
                 int[] values = new int[attribs.Length];
 
                 // Get the format attributes for this pixel format
-                if (!OpenGL.Wgl.GetPixelFormatAttribARB(device, pixelformat, 0, (uint)attribs.Length - 1, attribs, values))
+                if (!Wgl.WglGetPixelFormatAttribivARB(device, pixelformat, 0, (uint)attribs.Length - 1, attribs, values))
                 {
                     Debug.Print("[Warning] Failed to detect attributes for PixelFormat: {0}.", pixelformat);
                 }

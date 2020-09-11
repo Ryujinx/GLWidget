@@ -115,11 +115,6 @@ namespace OpenTK
             LoadBindings("OpenGL4");
         }
 
-        private static IntPtr GetProcAddressWgl(string function)
-        {
-            return UnsafeNativeMethods.wglGetProcAddress(function);
-        }
-
         private static void LoadLibraries()
         {
             if (Loaded)
@@ -140,30 +135,6 @@ namespace OpenTK
                 Delegates.pglXGetProcAddress = (Delegates.glXGetProcAddress)Marshal.GetDelegateForFunctionPointer(functionPtr, typeof(Delegates.glXGetProcAddress));
             
             Loaded = true;
-        }
-
-        public static IntPtr GetWindowHandle(IntPtr handle)
-        {
-            if(CurrentPlatform == OSPlatform.Windows)
-            {
-                return UnsafeNativeMethods.gdk_win32_window_get_handle(handle);
-            }
-            else
-            {
-                return UnsafeNativeMethods.gdk_x11_window_get_xid(handle);
-            }
-        }
-
-        public static IntPtr GetDisplayHandle(IntPtr handle)
-        {
-            if (CurrentPlatform == OSPlatform.Windows)
-            {
-                return IntPtr.Zero;
-            }
-            else
-            {
-                return UnsafeNativeMethods.gdk_x11_display_get_xdisplay(handle);
-            }
         }
 
         internal static IntPtr GetLibraryHandle(string libraryPath, bool throws)
@@ -205,44 +176,8 @@ namespace OpenTK
             return symbol;
         }
 
-        public static void InitXThreads()
-        {
-            if (_threadsInitialized)
-            {
-                return;
-            }
-            
-            if (CurrentPlatform == OSPlatform.Linux)
-            {
-                _threadsInitialized = true;
-
-                UnsafeNativeMethods.XInitThreads();
-            }
-        }
-
         internal static class UnsafeNativeMethods
         {
-            [DllImport("kernel32.dll", SetLastError = true)]
-            internal static extern IntPtr GetProcAddress(IntPtr handle, string funcname);
-
-            [DllImport("kernel32.dll", SetLastError = true)]
-            internal static extern IntPtr LoadLibrary(string dllName);
-
-            [DllImport(WglLibrary, EntryPoint = "wglGetProcAddress", ExactSpelling = true, SetLastError = true)]
-            public static extern IntPtr wglGetProcAddress(string lpszProc);
-
-            [DllImport(WglLibrary, EntryPoint = "wglGetCurrentContext")]
-            public extern static IntPtr wglGetCurrentContext();
-
-            [DllImport(WglLibrary, EntryPoint = "wglGetCurrentDC")]
-            public static extern IntPtr wglGetCurrentDC();
-
-            [DllImport(WglLibrary, EntryPoint = "wglSwapBuffers", ExactSpelling = true)]
-            public static extern bool wglSwapBuffers(IntPtr hdc);
-
-            [DllImport("opengl32.dll", SetLastError = true, EntryPoint = "wglMakeCurrent")]
-            public static extern bool WglMakeCurrent(IntPtr hdc, IntPtr hglrc);
-
             [DllImport(OSXLibrary, EntryPoint = "NSIsSymbolNameDefined")]
             public static extern bool NSIsSymbolNameDefined(string s);
 
@@ -251,41 +186,6 @@ namespace OpenTK
 
             [DllImport(OSXLibrary, EntryPoint = "NSAddressOfSymbol")]
             public static extern IntPtr NSAddressOfSymbol(IntPtr symbol);
-
-            [DllImport("libX11.so.6")]
-            public extern static int XInitThreads();
-
-            [DllImport(OSXLibrary)]
-            public extern static int CGLSetCurrentContext(IntPtr ctx);
-
-            [DllImport(OSXLibrary)]
-            public extern static IntPtr CGLGetCurrentContext();
-            [DllImport(OSXLibrary)]
-            public extern static void CGLReleaseContext(IntPtr ctx);
-            [DllImport(OSXLibrary)]
-            public extern static int CGLFlushDrawable(IntPtr ctx);
-
-            [DllImport(OSXLibrary)]
-            internal static extern int CGLDestroyContext(IntPtr ctx);
-
-            [DllImport(OSXLibrary)]
-            internal static extern int CGLSetParameter(IntPtr ctx, int parameter, ref int value);
-
-            [DllImport(GlxLibrary, EntryPoint = "glXGetCurrentContext")]
-            public static extern IntPtr glXGetCurrentContext();
-
-            [DllImport(GlxLibrary, EntryPoint = "glXGetProcAddress")]
-            public static extern IntPtr glXGetProcAddress();
-
-            [DllImport(GlxLibrary, EntryPoint = "glXSwapIntervalEXT")]
-            public static extern IntPtr glXSwapIntervalEXT(int interval);
-
-            [DllImport(GlxLibrary, EntryPoint = "glXMakeCurrent")]
-            public static extern bool glXMakeCurrent(IntPtr display, IntPtr drawable, IntPtr context);
-
-            [DllImport(GlxLibrary, EntryPoint = "glXSwapBuffers")]
-            public static extern void glXSwapBuffers(IntPtr display, IntPtr drawable);
-
             public const int RTLD_LAZY = 1;
 
             public const int RTLD_NOW = 2;
@@ -298,17 +198,6 @@ namespace OpenTK
 
             [DllImport("dl")]
             public static extern string dlerror();
-
-            public const string GdkNativeDll = "libgdk-3-0.dll";
-
-            [DllImport(GdkNativeDll, CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr gdk_win32_window_get_handle(IntPtr raw);
-
-            [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr gdk_x11_display_get_xdisplay(IntPtr raw);
-
-            [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr gdk_x11_window_get_xid(IntPtr raw);
         }
 
         private static class Delegates

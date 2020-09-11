@@ -51,8 +51,8 @@ namespace OpenTK.Platform.Windows
                     bool get_arb = SupportsFunction("wglGetExtensionsStringARB");
                     bool get_ext = SupportsFunction("wglGetExtensionsStringEXT");
                     string str =
-                        get_arb ? OpenGL.Wgl.GetExtensionsStringARB(dc) :
-                        get_ext ? OpenGL.Wgl.GetExtensionsStringEXT():
+                        get_arb ? Wgl.GetExtensionsStringARB(dc) :
+                        get_ext ? Wgl.GetExtensionsStringEXT():
                         String.Empty;
 
                     if (!String.IsNullOrEmpty(str))
@@ -123,6 +123,14 @@ namespace OpenTK.Platform.Windows
                         EntryPoints[i] = GetAddress(EntryPointNames[i]);
                     }
                     extensions.Clear();
+
+                    wglSwapIntervalEXT = GetProcAddress<SwapIntervalEXT>("wglSwapIntervalEXT");
+                    wglGetSwapIntervalEXT = GetProcAddress<GetSwapIntervalEXT>("wglGetSwapIntervalEXT");
+                    wglGetExtensionsStringARB = GetProcAddress<GetExtensionsStringARBDelegate>("wglGetExtensionsStringARB");
+                    wglGetExtensionsStringEXT = GetProcAddress<GetExtensionsStringEXTDelegate>("wglGetExtensionsStringEXT");
+                    wglCreateContextAttribs = GetProcAddress<CreateContextAttribsARBDelegate>("wglCreateContextAttribsARB");
+                    wglChoosePixelFormatARB = GetProcAddress<ChoosePixelFormatARB>("wglChoosePixelFormatARB");
+                    WglGetPixelFormatAttribivARB = GetProcAddress<GetPixelFormatAttribivARB>("wglGetPixelFormatAttribivARB");
                 }
             }
         }

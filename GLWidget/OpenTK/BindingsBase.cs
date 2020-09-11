@@ -178,7 +178,7 @@ namespace OpenTK
                 }
                 catch (OutOfMemoryException)
                 {
-                    for (i = i - 1; i >= 0; --i)
+                    for (i -= 1; i >= 0; --i)
                     {
                         Marshal.FreeHGlobal(Marshal.ReadIntPtr(ptr, i * IntPtr.Size));
                     }

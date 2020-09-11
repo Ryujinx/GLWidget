@@ -380,34 +380,6 @@ namespace OpenTK.Platform.Linux
             }
             return null;
         }
-
-        public override bool TryChangeResolution(DisplayDevice device, DisplayResolution resolution)
-        {
-            unsafe
-            {
-                LinuxDisplay display = (LinuxDisplay)device.Id;
-                ModeInfo* mode = GetModeInfo(display, resolution);
-                int connector_id = display.pConnector->connector_id;
-                if (mode != null)
-                {
-                    return Drm.ModeSetCrtc(FD, display.Id, 0, 0, 0,
-                        &connector_id, 1, mode) == 0;
-                }
-                return false;
-            }
-        }
-
-        public override bool TryRestoreResolution(DisplayDevice device)
-        {
-            unsafe
-            {
-                LinuxDisplay display = (LinuxDisplay)device.Id;
-                ModeInfo mode = display.OriginalMode;
-                int connector_id = display.pConnector->connector_id;
-                return Drm.ModeSetCrtc(FD, display.Id, 0, 0, 0,
-                    &connector_id, 1, &mode) == 0;
-            }
-        }
     }
 }
 

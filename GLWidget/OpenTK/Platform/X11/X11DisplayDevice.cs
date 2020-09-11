@@ -318,93 +318,13 @@ namespace OpenTK.Platform.X11
         {
             return (int)Functions.XDefaultDepth(API.DefaultDisplay, screen);
         }
-
-        private bool ChangeResolutionXRandR(DisplayDevice device, DisplayResolution resolution)
-        {
-            using (new XLock(API.DefaultDisplay))
-            {
-                int screen = deviceToScreen[device];
-                IntPtr root = Functions.XRootWindow(API.DefaultDisplay, screen);
-                IntPtr screen_config = Functions.XRRGetScreenInfo(API.DefaultDisplay, root);
-
-                ushort current_rotation;
-                int current_resolution_index = Functions.XRRConfigCurrentConfiguration(screen_config, out current_rotation);
-                int new_resolution_index;
-                if (resolution != null)
-                {
-                    new_resolution_index = screenResolutionToIndex[screen]
-                        [new DisplayResolution(0, 0, resolution.Width, resolution.Height, resolution.BitsPerPixel, 0)];
-                }
-                else
-                {
-                    new_resolution_index = deviceToDefaultResolution[device];
-                }
-
-                Debug.Print("Changing size of screen {0} from {1} to {2}",
-                    screen, current_resolution_index, new_resolution_index);
-
-                int ret = 0;
-                short refresh_rate = (short)(resolution != null ? resolution.RefreshRate : 0);
-                if (refresh_rate > 0)
-                {
-                    ret = Functions.XRRSetScreenConfigAndRate(API.DefaultDisplay,
-                    screen_config, root, new_resolution_index, current_rotation,
-                    refresh_rate, IntPtr.Zero);
-                }
-                else
-                {
-                    ret = Functions.XRRSetScreenConfig(API.DefaultDisplay,
-                    screen_config, root, new_resolution_index, current_rotation,
-                    IntPtr.Zero);
-                }
-
-                if (ret != 0)
-                {
-                    Debug.Print("[Error] Change to resolution {0} failed with error {1}.",
-                        resolution, (ErrorCode)ret);
-                }
-
-                return ret == 0;
-            }
-        }
-
-        private static bool ChangeResolutionXF86(DisplayDevice device, DisplayResolution resolution)
-        {
-            return false;
-        }
-
-        public sealed override bool TryChangeResolution(DisplayDevice device, DisplayResolution resolution)
-        {
-            // If resolution is null, restore the default resolution (new_resolution_index = 0).
-
-            if (xrandr_supported)
-            {
-                return ChangeResolutionXRandR(device, resolution);
-            }
-            else if (xf86_supported)
-            {
-                return ChangeResolutionXF86(device, resolution);
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        public sealed override bool TryRestoreResolution(DisplayDevice device)
-        {
-            return TryChangeResolution(device, null);
-        }
-
+        
         private static class NativeMethods
         {
             private const string Xinerama = "libXinerama";
 
             [DllImport(Xinerama)]
             public static extern bool XineramaQueryExtension(IntPtr dpy, out int event_basep, out int error_basep);
-
-            [DllImport(Xinerama)]
-            public static extern int XineramaQueryVersion (IntPtr dpy, out int major_versionp, out int minor_versionp);
 
             [DllImport(Xinerama)]
             public static extern bool XineramaIsActive(IntPtr dpy);

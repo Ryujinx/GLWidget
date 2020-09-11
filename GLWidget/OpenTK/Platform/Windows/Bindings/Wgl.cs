@@ -61,6 +61,50 @@ namespace OpenTK.Platform.Windows
             EntryPoints = new IntPtr[EntryPointNames.Length];
         }
 
+        public delegate IntPtr CreateContextAttribsARBDelegate(IntPtr hDC, IntPtr shareHGLRC, int[] attribs);
+        public static CreateContextAttribsARBDelegate wglCreateContextAttribs;
+
+        public delegate bool SwapIntervalEXT(int interval);
+        public static SwapIntervalEXT wglSwapIntervalEXT;
+
+        public delegate int GetSwapIntervalEXT();
+        public static GetSwapIntervalEXT wglGetSwapIntervalEXT;
+
+        internal delegate IntPtr GetExtensionsStringARBDelegate(IntPtr hdc);
+        internal static GetExtensionsStringARBDelegate wglGetExtensionsStringARB;
+        
+        internal delegate IntPtr GetExtensionsStringEXTDelegate();
+        internal static GetExtensionsStringEXTDelegate wglGetExtensionsStringEXT;
+
+        public delegate bool ChoosePixelFormatARB(IntPtr hdc, int[] piAttribIList, float[] pfAttribFList, uint nMaxFormats, int[] piFormats, ref uint nNumFormats);
+        public static ChoosePixelFormatARB wglChoosePixelFormatARB;
+
+        public delegate bool GetPixelFormatAttribivARB(IntPtr hdc, int iPixelFormat, int iLayerPlane, uint nAttributes, int[] piAttributes, int[] piValues);
+        public static GetPixelFormatAttribivARB WglGetPixelFormatAttribivARB;
+
+        public static string GetExtensionsStringARB(IntPtr hdc)
+        {
+            unsafe
+            {
+                return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(wglGetExtensionsStringARB(hdc));
+            }
+        }
+        
+        public static string GetExtensionsStringEXT()
+        {
+            unsafe
+            {
+                return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(wglGetExtensionsStringEXT());
+            }
+        }
+
+        public static TDelegate GetProcAddress<TDelegate>(string name) where TDelegate : class
+        {
+            IntPtr addr = GetProcAddress(name);
+            if (addr == IntPtr.Zero) return null;
+            return (TDelegate)(object)System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer(addr, typeof(TDelegate));
+        }
+
         [SuppressUnmanagedCodeSecurity]
         [DllImport(Wgl.Library, EntryPoint = "wglCreateContext", ExactSpelling = true, SetLastError = true)]
         internal extern static IntPtr CreateContext(IntPtr hDc);
@@ -74,12 +118,6 @@ namespace OpenTK.Platform.Windows
         [DllImport(Wgl.Library, EntryPoint = "wglMakeCurrent", ExactSpelling = true, SetLastError = true)]
         internal extern static Boolean MakeCurrent(IntPtr hDc, IntPtr newContext);
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(Wgl.Library, EntryPoint = "wglChoosePixelFormat", ExactSpelling = true, SetLastError = true)]
-        internal extern static unsafe int ChoosePixelFormat(IntPtr hDc, ref PixelFormatDescriptor pPfd);
-        [SuppressUnmanagedCodeSecurity]
-        [DllImport(Wgl.Library, EntryPoint = "wglDescribePixelFormat", ExactSpelling = true, SetLastError = true)]
-        internal extern static unsafe int DescribePixelFormat(IntPtr hdc, int ipfd, int cjpfd, ref PixelFormatDescriptor ppfd);
-        [SuppressUnmanagedCodeSecurity]
         [DllImport(Wgl.Library, EntryPoint = "wglGetCurrentDC", ExactSpelling = true, SetLastError = true)]
         internal extern static IntPtr GetCurrentDC();
         [SuppressUnmanagedCodeSecurity]
@@ -89,71 +127,7 @@ namespace OpenTK.Platform.Windows
         [DllImport(Wgl.Library, EntryPoint = "wglGetProcAddress", ExactSpelling = true, SetLastError = true)]
         internal extern static IntPtr GetProcAddress(IntPtr lpszProc);
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(Wgl.Library, EntryPoint = "wglGetPixelFormat", ExactSpelling = true, SetLastError = true)]
-        internal extern static int GetPixelFormat(IntPtr hdc);
-        [SuppressUnmanagedCodeSecurity]
-        [DllImport(Wgl.Library, EntryPoint = "wglSetPixelFormat", ExactSpelling = true, SetLastError = true)]
-        internal extern static Boolean SetPixelFormat(IntPtr hdc, int ipfd, ref PixelFormatDescriptor ppfd);
-        [SuppressUnmanagedCodeSecurity]
-        [DllImport(Wgl.Library, EntryPoint = "wglSwapBuffers", ExactSpelling = true, SetLastError = true)]
-        internal extern static Boolean SwapBuffers(IntPtr hdc);
-        [SuppressUnmanagedCodeSecurity]
         [DllImport(Wgl.Library, EntryPoint = "wglShareLists", ExactSpelling = true, SetLastError = true)]
         internal extern static Boolean ShareLists(IntPtr hrcSrvShare, IntPtr hrcSrvSource);
-
-        [Slot(0)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern IntPtr wglCreateContextAttribsARB(IntPtr hDC, IntPtr hShareContext, int* attribList);
-        [Slot(1)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern IntPtr wglGetExtensionsStringARB(IntPtr hdc);
-        [Slot(2)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern Boolean wglGetPixelFormatAttribivARB(IntPtr hdc, int iPixelFormat, int iLayerPlane, UInt32 nAttributes, int* piAttributes, [Out] int* piValues);
-        [Slot(3)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern Boolean wglGetPixelFormatAttribfvARB(IntPtr hdc, int iPixelFormat, int iLayerPlane, UInt32 nAttributes, int* piAttributes, [Out] Single* pfValues);
-        [Slot(4)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern Boolean wglChoosePixelFormatARB(IntPtr hdc, int* piAttribIList, Single* pfAttribFList, UInt32 nMaxFormats, [Out] int* piFormats, [Out] UInt32* nNumFormats);
-        [Slot(5)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern Boolean wglMakeContextCurrentARB(IntPtr hDrawDC, IntPtr hReadDC, IntPtr hglrc);
-        [Slot(6)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern IntPtr wglGetCurrentReadDCARB();
-        [Slot(7)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern IntPtr wglCreatePbufferARB(IntPtr hDC, int iPixelFormat, int iWidth, int iHeight, int* piAttribList);
-        [Slot(8)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern IntPtr wglGetPbufferDCARB(IntPtr hPbuffer);
-        [Slot(9)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern int wglReleasePbufferDCARB(IntPtr hPbuffer, IntPtr hDC);
-        [Slot(10)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern Boolean wglDestroyPbufferARB(IntPtr hPbuffer);
-        [Slot(11)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern Boolean wglQueryPbufferARB(IntPtr hPbuffer, int iAttribute, [Out] int* piValue);
-        [Slot(12)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern Boolean wglBindTexImageARB(IntPtr hPbuffer, int iBuffer);
-        [Slot(13)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern Boolean wglReleaseTexImageARB(IntPtr hPbuffer, int iBuffer);
-        [Slot(14)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal unsafe static extern Boolean wglSetPbufferAttribARB(IntPtr hPbuffer, int* piAttribList);
-        [Slot(15)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern IntPtr wglGetExtensionsStringEXT();
-        [Slot(16)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern Boolean wglSwapIntervalEXT(int interval);
-        [Slot(17)]
-        [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
-        internal static extern int wglGetSwapIntervalEXT();
     }
 }

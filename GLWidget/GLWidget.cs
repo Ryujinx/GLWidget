@@ -198,10 +198,7 @@ namespace OpenTK
 
         private static void OnGraphicsContextInitialized()
         {
-            if (GraphicsContextInitialized != null)
-            {
-                GraphicsContextInitialized(null, EventArgs.Empty);
-            }
+            GraphicsContextInitialized?.Invoke(null, EventArgs.Empty);
         }
 
         // Called when the first GraphicsContext is being destroyed in the case of GraphicsContext.ShareContexts == True;
@@ -209,10 +206,7 @@ namespace OpenTK
 
         private static void OnGraphicsContextShuttingDown()
         {
-            if (GraphicsContextShuttingDown != null)
-            {
-                GraphicsContextShuttingDown(null, EventArgs.Empty);
-            }
+            GraphicsContextShuttingDown?.Invoke(null, EventArgs.Empty);
         }
 
         // Called when this GLWidget has a valid GraphicsContext
@@ -220,10 +214,7 @@ namespace OpenTK
 
         protected virtual void OnInitialized()
         {
-            if (Initialized != null)
-            {
-                Initialized(this, EventArgs.Empty);
-            }
+            Initialized?.Invoke(this, EventArgs.Empty);
         }
 
         // Called when this GLWidget needs to render a frame

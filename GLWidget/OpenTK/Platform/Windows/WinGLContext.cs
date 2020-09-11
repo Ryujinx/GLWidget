@@ -160,7 +160,7 @@ namespace OpenTK.Platform.Windows
                             attributes.Add(0);
 
                             Handle = new ContextHandle(
-                                OpenGL.Wgl.CreateContextAttribsARB(
+                                Wgl.wglCreateContextAttribs(
                                     window.DeviceContext,
                                     sharedContext != null ? (sharedContext as IGraphicsContextInternal).Context.Handle : IntPtr.Zero,
                                     attributes.ToArray()));
@@ -304,7 +304,7 @@ namespace OpenTK.Platform.Windows
                 {
                     if (vsync_supported)
                     {
-                        return OpenGL.Wgl.GetSwapIntervalEXT();
+                        return Wgl.wglGetSwapIntervalEXT();
                     }
                     else
                     {
@@ -322,7 +322,7 @@ namespace OpenTK.Platform.Windows
                         {
                             value = 1;
                         }
-                        if (!OpenGL.Wgl.SwapIntervalEXT(value))
+                        if (!Wgl.wglSwapIntervalEXT(value))
                         {
                             Debug.Print("wglSwapIntervalEXT call failed.");
                         }
