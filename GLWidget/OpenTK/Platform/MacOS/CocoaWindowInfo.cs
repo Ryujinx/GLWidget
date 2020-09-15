@@ -37,6 +37,7 @@ namespace OpenTK.Platform.MacOS
     internal sealed class CocoaWindowInfo : IWindowInfo
     {
         private static readonly IntPtr selContentView = Selector.Get("contentView");
+        private static readonly IntPtr selWindow = Selector.Get("window");
 
         private bool disposed = false;
 
@@ -57,6 +58,11 @@ namespace OpenTK.Platform.MacOS
         /// <param name="nsViewRef">A valid NSView reference.</param>
         public CocoaWindowInfo(IntPtr nsWindowRef, IntPtr nsViewRef)
         {
+            if (nsWindowRef == IntPtr.Zero)
+            {
+                nsWindowRef = Cocoa.SendIntPtr(nsViewRef, selWindow);
+            }
+
             this.Handle = nsWindowRef;
             this.ViewHandle = nsViewRef;
             Cocoa.SendVoid(nsWindowRef, Selector.Retain);

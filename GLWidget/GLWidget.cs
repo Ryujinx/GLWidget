@@ -365,7 +365,14 @@ namespace OpenTK
         IWindowInfo InitializeOSX()
         {
             IntPtr windowHandle = gdk_quartz_window_get_nswindow(this.Window.Handle);
-            //IntPtr viewHandle = gdk_quartz_window_get_nsview(this.GdkWindow.Handle);
+
+            if (windowHandle == IntPtr.Zero)
+            {
+                IntPtr viewHandle = gdk_quartz_window_get_nsview(this.Window.Handle);
+
+                return Utilities.CreateMacOSWindowInfo(windowHandle, viewHandle);
+            }
+
             return Utilities.CreateMacOSWindowInfo(windowHandle);
         }
 
