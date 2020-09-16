@@ -63,6 +63,8 @@ namespace OpenTK.Graphics
         /// <para>This method only affects the debug version of OpenTK.dll.</para>
         /// </remarks>
         bool ErrorChecking { get; set; }
+        int Width { get; set; }
+        int Height { get; set; }
 
         /// <summary>
         /// Loads all OpenGL entry points. Requires this instance to be current on the calling thread.

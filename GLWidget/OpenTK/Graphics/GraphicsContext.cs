@@ -486,6 +486,8 @@ namespace OpenTK.Graphics
         /// <param name="window"></param>
         public void Update(IWindowInfo window)
         {
+            implementation.Width = Width;
+            implementation.Height = Height;
             implementation.Update(window);
         }
 
@@ -535,6 +537,9 @@ namespace OpenTK.Graphics
         {
             get { return (implementation as IGraphicsContext).GraphicsMode; }
         }
+
+        public int Width { get; set; }
+        public int Height { get; set; }
 
         /// <summary>
         /// Retrieves the implementation-defined address of an OpenGL function.

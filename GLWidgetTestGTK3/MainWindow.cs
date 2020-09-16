@@ -298,7 +298,9 @@ namespace GLWidgetTestGTK3
 		{
 			var version = GL.GetString(StringName.Version);
 
-			this.Scene = new Scene();
+            var framebufferStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+
+            this.Scene = new Scene();
 
 			// Create the cube actor
 			Actor cubeActor = new Actor(new Mesh(FloatArrayToVertexList(Shapes.UnindexedCube)));
@@ -361,6 +363,11 @@ namespace GLWidgetTestGTK3
 		protected void RenderFrame()
         {
             MainGLWidget.MakeCurrent();
+
+            if (MainGLWidget.Resize)
+            {
+                MainGLWidget.Update();
+            }
 
             // Make sure the viewport is accurate for the current widget size on screen
             int widgetWidth = this.GLWidgetAlignment.AllocatedWidth;

@@ -60,6 +60,7 @@ namespace OpenTK
         private IWindowInfo _windowInfo;
         private bool _initialized;
         private int swapInterval = 0;
+        private bool _resize;
 
         #endregion
 
@@ -141,6 +142,13 @@ namespace OpenTK
             GLVersionMajor = glVersionMajor;
             GLVersionMinor = glVersionMinor;
             GraphicsContextFlags = graphicsContextFlags;
+
+            this.ConfigureEvent += GLWidget_ConfigureEvent;
+        }
+
+        private void GLWidget_ConfigureEvent(object o, ConfigureEventArgs args)
+        {
+            Resize = true;
         }
 
         ~GLWidget()
@@ -155,7 +163,6 @@ namespace OpenTK
 
         public void ClearCurrent()
         {
-            Gdk.GLContext.ClearCurrent();
             GraphicsContext.MakeCurrent(null);
         }
 
@@ -222,10 +229,11 @@ namespace OpenTK
 
         protected virtual void OnRenderFrame()
         {
-            if (RenderFrame != null)
+            if (_resize)
             {
-                RenderFrame(this, EventArgs.Empty);
+                Update();
             }
+            RenderFrame?.Invoke(this, EventArgs.Empty);
         }
 
         // Called when this GLWidget is being Disposed
@@ -240,10 +248,6 @@ namespace OpenTK
         }
 
         #endregion
-
-        // Called when a widget is realized. (window handles and such are valid)
-        // protected override void OnRealized() { base.OnRealized(); }
-
         // Called when the widget needs to be (fully or partially) redrawn.
 
         protected override bool OnDrawn(Cairo.Context cr)
@@ -251,20 +255,23 @@ namespace OpenTK
             if (!_initialized)
                 Initialize();
             else if (!IsRenderHandler)
+            {
                 MakeCurrent();
+                OnRenderFrame();
+                ClearCurrent();
+            }
 
             return true;
         }
 
-        // Called on Resize
-        protected override bool OnConfigureEvent(Gdk.EventConfigure evnt)
+        public void Update()
         {
-            if (GraphicsContext != null)
-            {
-                GraphicsContext.Update(WindowInfo);
-            }
+            GraphicsContext.Width = AllocatedWidth;
+            GraphicsContext.Height = AllocatedHeight;
 
-            return true;
+            GraphicsContext?.Update(WindowInfo);
+
+            _resize = false;
         }
 
         private void Initialize()
@@ -296,7 +303,7 @@ namespace OpenTK
                 buffers--;
             }
 
-            GraphicsMode graphicsMode = GraphicsMode.Default;//new GraphicsMode(colorBufferColorFormat, DepthBPP, StencilBPP, Samples, accumulationColorFormat, buffers, Stereo);
+            GraphicsMode graphicsMode = new GraphicsMode(colorBufferColorFormat, DepthBPP, StencilBPP, Samples, accumulationColorFormat, buffers, Stereo);
 
             this.Window.EnsureNative();
 
@@ -558,6 +565,7 @@ namespace OpenTK
 
         public IGraphicsContext GraphicsContext { get => _graphicsContext; set => _graphicsContext = value; }
         public IWindowInfo WindowInfo { get => _windowInfo; set => _windowInfo = value; }
+        public bool Resize { get => _resize; set => _resize = value; }
 
         [DllImport(UnixLibX11Name, EntryPoint = "XGetVisualInfo")]
         private static extern IntPtr XGetVisualInfoInternal(IntPtr display, IntPtr vinfo_mask, ref XVisualInfo template, out int nitems);

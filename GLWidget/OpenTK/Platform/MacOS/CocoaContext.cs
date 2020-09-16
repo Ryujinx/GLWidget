@@ -32,6 +32,7 @@ using OpenTK.Platform.MacOS;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using MonoMac;
 
 namespace OpenTK
 {
@@ -44,6 +45,7 @@ namespace OpenTK
         private static readonly IntPtr selCurrentContext = Selector.Get("currentContext");
         private static readonly IntPtr selFlushBuffer = Selector.Get("flushBuffer");
         private static readonly IntPtr selMakeCurrentContext = Selector.Get("makeCurrentContext");
+        private static readonly IntPtr selClearCurrentContext = Selector.Get("clearCurrentContext");
         private static readonly IntPtr selUpdate = Selector.Get("update");
 
         private static readonly IntPtr opengl = NS.AddImage(
@@ -98,6 +100,7 @@ namespace OpenTK
 
             Handle = handle;
             cocoaWindow = (CocoaWindowInfo)window;
+            Cocoa.SendVoid(cocoaWindow.ViewHandle, Selector.Get("setAutoresizingMask:"), (uint)(MonoMac.AppKit.NSViewResizingMask.HeightSizable | MonoMac.AppKit.NSViewResizingMask.WidthSizable));
         }
 
         private void AddPixelAttrib(List<NSOpenGLPixelFormatAttribute> attributes, NSOpenGLPixelFormatAttribute attribute)
@@ -147,6 +150,8 @@ namespace OpenTK
             // Finalize
             Handle = new ContextHandle(context);
             Mode = GetGraphicsMode(context);
+
+            Cocoa.SendVoid(cocoaWindow.ViewHandle, Selector.Get("setAutoresizingMask:"), (uint)(MonoMac.AppKit.NSViewResizingMask.HeightSizable | MonoMac.AppKit.NSViewResizingMask.WidthSizable));
 
             Update(cocoaWindow);
         }
@@ -276,7 +281,14 @@ namespace OpenTK
 
         public override void MakeCurrent(IWindowInfo window)
         {
-            Cocoa.SendVoid(Handle.Handle, selMakeCurrentContext);
+            if (window == null)
+            {
+                Cocoa.SendVoid(NSOpenGLContext, selClearCurrentContext);
+            }
+            else
+            {
+                Cocoa.SendVoid(Handle.Handle, selMakeCurrentContext);
+            }
         }
 
         public override bool IsCurrent
@@ -328,6 +340,20 @@ namespace OpenTK
 
         public override void Update(IWindowInfo window)
         {
+            var cocoaWindow = (CocoaWindowInfo)window;
+
+            if (Width > 0 && Height > 0)
+            {
+                GLib.Idle.Add(new GLib.IdleHandler(() =>
+                            {
+                                var previous = MonoMac.AppKit.NSApplication.CheckForIllegalCrossThreadCalls;
+                                MonoMac.AppKit.NSApplication.CheckForIllegalCrossThreadCalls = false;
+                                var view = new MonoMac.AppKit.NSView(cocoaWindow.ViewHandle);
+                                view.SetFrameSize(new MonoMac.CoreGraphics.CGSize(Width, Height));
+                                MonoMac.AppKit.NSApplication.CheckForIllegalCrossThreadCalls = previous;
+                                return false;
+                            }));
+            }
             Cocoa.SendVoid(Handle.Handle, selUpdate);
         }
 

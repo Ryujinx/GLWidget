@@ -125,6 +125,9 @@ namespace OpenTK.Platform.MacOS
         [DllImport(LibObjC, EntryPoint="objc_msgSend")]
         public extern static void SendVoid(IntPtr receiver, IntPtr selector, NSRect rect1, IntPtr intPtr1);
 
+        [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+        public extern static void SendVoid(IntPtr receiver, IntPtr selector, NSSize size1);
+
         [DllImport(LibObjC, EntryPoint="objc_msgSend")]
         public extern static int SendInt(IntPtr receiver, IntPtr selector);
 

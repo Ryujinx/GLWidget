@@ -16,7 +16,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GtkSharp" Version="3.22.25.56" />
-    <PackageReference Include="OpenTK" Version="4.0.0-pre9.4" />
+    <PackageReference Include="OpenTK" Version="4.0.0-pre9.6" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="interfaces\MainWindow.glade" />

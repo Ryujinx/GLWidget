@@ -79,6 +79,10 @@ namespace OpenTK.Graphics
 
         public ContextHandle Context { get { return Handle; } }
 
+        public int Width { get; set; }
+
+        public int Height{ get; set; }
+
         // This function is no longer used.
         // The GraphicsContext facade will
         // always call the IntPtr overload.
