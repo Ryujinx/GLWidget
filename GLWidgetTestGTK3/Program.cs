@@ -10,8 +10,9 @@ namespace GLWidgetTestGTK3
 	{
 		public static void Main(string[] args)
 		{
-         //   GTKBindingHelper.InitXThreads();
-            // GTK
+			//   GTKBindingHelper.InitXThreads();
+			// GTK
+			GTKBindingHelper.InitializeGlBindings();
             Application.Init();
 			MainWindow win = MainWindow.Create();
 			win.Show();

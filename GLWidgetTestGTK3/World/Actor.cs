@@ -93,8 +93,15 @@ namespace GLWidgetTestGTK3.World
 	        int projectionShaderVariableHandle = GL.GetUniformLocation(ShaderProgramID, "ModelViewProjection");
 	        GL.UniformMatrix4(projectionShaderVariableHandle, false, ref modelViewProjection);
 
-	        // Draw the model
-	        GL.DrawArrays(BeginMode.Triangles, 0, Mesh.GetVertexCount());
+			// Draw the model
+			try
+			{
+				GL.DrawArrays(PrimitiveType.Triangles, 0, Mesh.GetVertexCount());
+            }
+            catch (Exception)
+            {
+
+            }
 
 	        // Release the attribute arrays
 	        GL.DisableVertexAttribArray(0);

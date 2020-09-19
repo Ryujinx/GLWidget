@@ -111,8 +111,26 @@ namespace OpenTK.Platform.Windows
         internal static readonly int WindowInfoSize;
     }
 
+
     internal static class Functions
     {
+
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern ushort RegisterClass(ref WindowClass window_class);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern ushort RegisterClassEx(ref ExtendedWindowClass window_class);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern short UnregisterClass([MarshalAs(UnmanagedType.LPTStr)] LPCTSTR className, IntPtr instance);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern short UnregisterClass(IntPtr className, IntPtr instance);
+
+        [DllImport("User32.dll", CharSet = CharSet.Unicode)]
+        public extern static IntPtr DefWindowProc(HWND hWnd, WindowMessage msg, IntPtr wParam, IntPtr lParam);
+
         /// <summary>
         ///
         /// </summary>
@@ -133,6 +151,49 @@ namespace OpenTK.Platform.Windows
 
         [DllImport("gdi32.dll")]
         internal static extern int ChoosePixelFormat(IntPtr dc, ref PixelFormatDescriptor pfd);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        internal static extern IntPtr CreateWindowEx(
+            ExtendedWindowStyle ExStyle,
+            [MarshalAs(UnmanagedType.LPTStr)] string className,
+            [MarshalAs(UnmanagedType.LPTStr)] string windowName,
+            WindowStyle Style,
+            int X, int Y,
+            int Width, int Height,
+            IntPtr HandleToParentWindow,
+            IntPtr Menu,
+            IntPtr Instance,
+            IntPtr Param);
+        /*
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern int CreateWindowEx(
+            [In]ExtendedWindowStyle ExStyle,
+            [In]IntPtr ClassName,
+            [In]IntPtr WindowName,
+            [In]WindowStyle Style,
+            [In]int X, [In]int Y,
+            [In]int Width, [In]int Height,
+            [In]IntPtr HandleToParentWindow,
+            [In]IntPtr Menu,
+            [In]IntPtr Instance,
+            [In]IntPtr Param);
+        */
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        internal static extern IntPtr CreateWindowEx(
+            ExtendedWindowStyle ExStyle,
+            IntPtr ClassAtom,
+            IntPtr WindowName,
+            WindowStyle Style,
+            int X, int Y,
+            int Width, int Height,
+            IntPtr HandleToParentWindow,
+            IntPtr Menu,
+            IntPtr Instance,
+            IntPtr Param);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool DestroyWindow(IntPtr windowHandle);
 
         [DllImport("gdi32.dll")]
         internal static extern int DescribePixelFormat(IntPtr deviceContext, int pixel, int pfdSize, ref PixelFormatDescriptor pixelFormat);
@@ -213,6 +274,7 @@ namespace OpenTK.Platform.Windows
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         public delegate void TimerProc(HWND hwnd, WindowMessage uMsg, UINT_PTR idEvent, DWORD dwTime);
     }
+
 
     internal static class Constants
     {
@@ -654,6 +716,7 @@ namespace OpenTK.Platform.Windows
             return String.Format("({0},{1})-({2},{3})", left, top, right, bottom);
         }
     }
+
 
     /// \internal
     /// <summary>

@@ -23,7 +23,7 @@ namespace OpenTK.Platform.Windows
 
         private bool vsync_supported;
         private bool vsync_tear_supported;
-
+        private bool focused;
         private readonly WinGraphicsMode ModeSelector;
 
         // We need to create a temp context in order to load
@@ -96,6 +96,74 @@ namespace OpenTK.Platform.Windows
             }
         }
 
+
+        private IntPtr WindowProcedure(IntPtr handle, WindowMessage message, IntPtr wParam, IntPtr lParam)
+        {
+            IntPtr? result = null;
+
+            switch (message)
+            {
+                case WindowMessage.ACTIVATE:
+                    HandleActivate(handle, message, wParam, lParam);
+                    break;
+                case WindowMessage.CREATE:
+                    HandleCreate(handle, message, wParam, lParam);
+                    break;
+
+                case WindowMessage.CLOSE:
+                    HandleClose(handle, message, wParam, lParam);
+                    return IntPtr.Zero;
+
+                case WindowMessage.DESTROY:
+                    HandleDestroy(handle, message, wParam, lParam);
+                    break;
+            }
+
+            if (result.HasValue)
+            {
+                return result.Value;
+            }
+            else
+            {
+                return Functions.DefWindowProc(handle, message, wParam, lParam);
+            }
+        }
+
+        private void HandleCreate(IntPtr handle, WindowMessage message, IntPtr wParam, IntPtr lParam)
+        {
+        }
+
+        private void HandleClose(IntPtr handle, WindowMessage message, IntPtr wParam, IntPtr lParam)
+        {
+            System.ComponentModel.CancelEventArgs e = new System.ComponentModel.CancelEventArgs();
+        }
+
+        private void HandleDestroy(IntPtr handle, WindowMessage message, IntPtr wParam, IntPtr lParam)
+        {
+        }
+
+        private void HandleActivate(IntPtr handle, WindowMessage message, IntPtr wParam, IntPtr lParam)
+        {
+            // See http://msdn.microsoft.com/en-us/library/ms646274(VS.85).aspx (WM_ACTIVATE notification):
+            // wParam: The low-order word specifies whether the window is being activated or deactivated.
+            bool new_focused_state = false;
+            if (IntPtr.Size == 4)
+            {
+                focused = (wParam.ToInt32() & 0xFFFF) != 0;
+            }
+            else
+            {
+                focused = (wParam.ToInt64() & 0xFFFF) != 0;
+            }
+        }
+
+        private readonly IntPtr ClassName = Marshal.StringToHGlobalAuto(Guid.NewGuid().ToString());
+
+        private readonly IntPtr Instance = GetModuleHandle(typeof(WinGLContext).Module.Name);
+
+        [DllImport("kernel32.dll")]
+        internal static extern IntPtr GetModuleHandle([MarshalAs(UnmanagedType.LPTStr)] string module_name);
+
         public WinGLContext(GraphicsMode format, WinWindowInfo window, IGraphicsContext sharedContext,
             int major, int minor, GraphicsContextFlags flags)
         {
@@ -114,13 +182,26 @@ namespace OpenTK.Platform.Windows
                 }
 
                 IntPtr current_context = Wgl.GetCurrentContext();
+
+                ExtendedWindowClass wc = new ExtendedWindowClass();
+                wc.Size = ExtendedWindowClass.SizeInBytes;
+                wc.Style = ClassStyle.OwnDC;
+                wc.Instance = Instance;
+                wc.WndProc = WindowProcedure;
+                wc.ClassName = ClassName;
+
+                ushort atom = Functions.RegisterClassEx(ref wc);
+
+                IntPtr window_name = Marshal.StringToHGlobalAuto("temp");
+                var temp_window = Functions.CreateWindowEx(ExtendedWindowStyle.WindowEdge | ExtendedWindowStyle.ApplicationWindow, ClassName, window_name, WindowStyle.OverlappedWindow | WindowStyle.ClipChildren, 0, 0, 10, 10, IntPtr.Zero, IntPtr.Zero,Instance, IntPtr.Zero);
+                var error = Marshal.GetLastWin32Error();
                 TemporaryContext temp_context = null;
                 try
                 {
                     if (current_context == IntPtr.Zero)
                     {
                         // Create temporary context to load WGL extensions
-                        temp_context = new TemporaryContext(window.Handle);
+                        temp_context = new TemporaryContext(temp_window);
                         current_context = Wgl.GetCurrentContext();
                         if (current_context != IntPtr.Zero && current_context == temp_context.Context.Handle)
                         {
@@ -197,6 +278,13 @@ namespace OpenTK.Platform.Windows
                     {
                         temp_context.Dispose();
                         temp_context = null;
+                    }
+                    if (temp_window != null)
+                    {
+                        error = Marshal.GetLastWin32Error();
+                        Functions.DestroyWindow(temp_window);
+                        Functions.UnregisterClass(ClassName, Instance);
+                        error = Marshal.GetLastWin32Error();
                     }
                 }
             }
@@ -396,9 +484,7 @@ namespace OpenTK.Platform.Windows
 
             Debug.WriteLine(mode.Index.ToString());
 
-            var index = Functions.ChoosePixelFormat(window.DeviceContext, ref pfd);
-
-            if (!Functions.SetPixelFormat(window.DeviceContext, index, ref pfd))
+            if (!Functions.SetPixelFormat(window.DeviceContext, (int)mode.Index.Value, ref pfd))
             {
                 throw new GraphicsContextException(String.Format(
                     "Requested GraphicsMode not available. SetPixelFormat error: {0}",
