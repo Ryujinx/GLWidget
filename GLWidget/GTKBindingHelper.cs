@@ -82,6 +82,9 @@ namespace OpenTK
 
             // Try to load OpenTK.Graphics assembly.
             Assembly assembly;
+
+            OpenTK.Toolkit.Init();
+
             try
             {
                 assembly = Assembly.Load("OpenTK.Graphics");

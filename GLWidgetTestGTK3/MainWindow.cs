@@ -134,6 +134,8 @@ namespace GLWidgetTestGTK3
 			this.GLInit = false;
 			ResetCamera();
 
+            OpenTK.Toolkit.Init();
+
             this.MainGLWidget = new GLWidget(GraphicsMode.Default)
             {
                 CanFocus = true,

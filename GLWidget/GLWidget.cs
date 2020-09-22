@@ -118,8 +118,6 @@ namespace OpenTK
 		/// <summary>Constructs a new GLWidget</summary>
 		public GLWidget(GraphicsMode graphicsMode, int glVersionMajor, int glVersionMinor, GraphicsContextFlags graphicsContextFlags)
 		{
-			OpenTK.Toolkit.Init();
-
 			SingleBuffer = graphicsMode.Buffers == 1;
 			ColorBPP = graphicsMode.ColorFormat.BitsPerPixel;
 			AccumulatorBPP = graphicsMode.AccumulatorFormat.BitsPerPixel;

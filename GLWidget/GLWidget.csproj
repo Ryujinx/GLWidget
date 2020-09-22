@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>GLWigdet for GTKSharp, using Opentk.</Description>
-    <Version>1.0.4-pre4</Version>
+    <Version>1.0.4-pre5</Version>
     <RepositoryUrl>https://github.com/Ryujinx/GLWidget</RepositoryUrl>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>

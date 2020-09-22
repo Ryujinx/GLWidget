@@ -184,13 +184,13 @@ namespace OpenTK.Platform.X11
 
                 using (new XLock(display))
                 {
-                    fixed (int* attribs_ptr = attributes.ToArray())
+                    fixed (int* attrib = attributes.ToArray())
                     {
-                        context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, direct, attribs_ptr);
+                        context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, direct, attrib);
                         if (context == IntPtr.Zero)
                         {
                             Debug.Write(String.Format("failed. Trying direct: {0}... ", !direct));
-                            context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, !direct, attribs_ptr);
+                            context = Glx.pglXCreateContextAttribsARB(display, fbconfig, shareContext.Handle, !direct, attrib);
                         }
                     }
                 }
@@ -306,63 +306,60 @@ namespace OpenTK.Platform.X11
 
         public override void MakeCurrent(IWindowInfo window)
         {
-            using (new XLock(Display))
+            if (window == currentWindow && IsCurrent)
             {
-                if (window == currentWindow && IsCurrent)
+                return;
+            }
+
+            if (window != null && ((X11WindowInfo)window).Display != Display)
+            {
+                throw new InvalidOperationException("MakeCurrent() may only be called on windows originating from the same display that spawned this GL context.");
+            }
+
+            if (window == null)
+            {
+                Debug.Write(String.Format("Releasing context {0} from thread {1} (Display: {2})... ",
+                        Handle, System.Threading.Thread.CurrentThread.ManagedThreadId, Display));
+
+                bool result;
+                result = Glx.MakeCurrent(Display, IntPtr.Zero, IntPtr.Zero);
+                if (result)
                 {
-                    return;
+                    currentWindow = null;
                 }
 
-                if (window != null && ((X11WindowInfo)window).Display != Display)
+                Debug.Print("{0}", result ? "done!" : "failed.");
+            }
+            else
+            {
+                X11WindowInfo w = (X11WindowInfo)window;
+                bool result;
+
+                Debug.Write(String.Format("Making context {0} current on thread {1} (Display: {2}, Screen: {3}, Window: {4})... ",
+                        Handle, System.Threading.Thread.CurrentThread.ManagedThreadId, Display, w.Screen, w.Handle));
+
+                if (Display == IntPtr.Zero || w.Handle == IntPtr.Zero || Handle == ContextHandle.Zero)
                 {
-                    throw new InvalidOperationException("MakeCurrent() may only be called on windows originating from the same display that spawned this GL context.");
+                    throw new InvalidOperationException("Invalid display, window or context.");
                 }
 
-                if (window == null)
+                result = Glx.MakeCurrent(Display, w.Handle, Handle);
+                if (result)
                 {
-                    Debug.Write(String.Format("Releasing context {0} from thread {1} (Display: {2})... ",
-                            Handle, System.Threading.Thread.CurrentThread.ManagedThreadId, Display));
+                    currentWindow = w;
+                }
 
-                    bool result;
-                    result = Glx.MakeCurrent(Display, IntPtr.Zero, IntPtr.Zero);
-                    if (result)
-                    {
-                        currentWindow = null;
-                    }
-
-                    Debug.Print("{0}", result ? "done!" : "failed.");
+                if (!result)
+                {
+                    throw new GraphicsContextException("Failed to make context current.");
                 }
                 else
                 {
-                    X11WindowInfo w = (X11WindowInfo)window;
-                    bool result;
-
-                    Debug.Write(String.Format("Making context {0} current on thread {1} (Display: {2}, Screen: {3}, Window: {4})... ",
-                            Handle, System.Threading.Thread.CurrentThread.ManagedThreadId, Display, w.Screen, w.Handle));
-
-                    if (Display == IntPtr.Zero || w.Handle == IntPtr.Zero || Handle == ContextHandle.Zero)
-                    {
-                        throw new InvalidOperationException("Invalid display, window or context.");
-                    }
-
-                    result = Glx.MakeCurrent(Display, w.Handle, Handle);
-                    if (result)
-                    {
-                        currentWindow = w;
-                    }
-
-                    if (!result)
-                    {
-                        throw new GraphicsContextException("Failed to make context current.");
-                    }
-                    else
-                    {
-                        Debug.WriteLine("done!");
-                    }
+                    Debug.WriteLine("done!");
                 }
-
-                currentWindow = (X11WindowInfo)window;
             }
+
+            currentWindow = (X11WindowInfo)window;
         }
 
         public override bool IsCurrent
@@ -429,7 +426,7 @@ namespace OpenTK.Platform.X11
                     }
                     else if (vsync_sgi_supported)
                     {
-                        error_code = (ErrorCode)Glx.glXSwapIntervalMESA((uint)value);
+                        error_code = (ErrorCode)Glx.glXSwapIntervalSGI(value);
                     }
                 }
 
@@ -465,7 +462,7 @@ namespace OpenTK.Platform.X11
             Debug.Print("Context supports adaptive vsync: {0}.",
                 vsync_tear_supported);
 
-            GTKBindingHelper.InitializeGlBindings();
+            base.LoadAll();
         }
 
         public override IntPtr GetAddress(IntPtr function)

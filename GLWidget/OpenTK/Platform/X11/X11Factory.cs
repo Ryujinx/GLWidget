@@ -26,18 +26,18 @@
 using System;
 using System.Diagnostics;
 using OpenTK.Graphics;
-
 namespace OpenTK.Platform.X11
 {
     internal class X11Factory : PlatformFactoryBase
     {
+
         public X11Factory()
         {
             int result = Functions.XInitThreads();
             Debug.Print("Initializing threaded X: {0}.", result != 0 ? "success" : "failed");
         }
-
-        public override IDisplayDeviceDriver CreateDisplayDeviceDriver()
+        
+       public override IDisplayDeviceDriver CreateDisplayDeviceDriver()
         {
             return new X11DisplayDevice();
         }
@@ -58,11 +58,6 @@ namespace OpenTK.Platform.X11
             {
                 return new ContextHandle(Glx.GetCurrentContext());
             };
-        }
-
-        protected override void Dispose(bool manual)
-        {
-            base.Dispose(manual);
         }
     }
 }

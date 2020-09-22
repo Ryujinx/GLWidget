@@ -139,6 +139,19 @@ namespace OpenTK.Platform.X11
         HYPERPIPE_PIXEL_AVERAGE_SGIX = 0x00000004,
     }
 
+    internal enum GLXStringName : int
+    {
+        EXTENSIONS = 0x3,
+        VERSION = 0x2,
+        VENDOR = 0x1,
+    }
+
+    internal enum GLXEventMask : int
+    {
+        PBUFFER_CLOBBER_MASK = 0x08000000,
+        BUFFER_CLOBBER_MASK_SGIX = 0x08000000,
+    }
+
     internal enum GLXRenderTypeMask : int
     {
         COLOR_INDEX_BIT_SGIX = 0x00000002,
@@ -146,6 +159,67 @@ namespace OpenTK.Platform.X11
         RGBA_FLOAT_BIT_ARB = 0x00000004,
         RGBA_BIT_SGIX = 0x00000001,
         COLOR_INDEX_BIT = 0x00000002,
+    }
+
+    internal enum GLXHyperpipeTypeMask : int
+    {
+        HYPERPIPE_RENDER_PIPE_SGIX = 0x00000002,
+        HYPERPIPE_DISPLAY_PIPE_SGIX = 0x00000001,
+    }
+
+    internal enum GLXPbufferClobberMask : int
+    {
+        ACCUM_BUFFER_BIT_SGIX = 0x00000080,
+        FRONT_LEFT_BUFFER_BIT = 0x00000001,
+        BACK_RIGHT_BUFFER_BIT = 0x00000008,
+        FRONT_RIGHT_BUFFER_BIT_SGIX = 0x00000002,
+        STENCIL_BUFFER_BIT_SGIX = 0x00000040,
+        SAMPLE_BUFFERS_BIT_SGIX = 0x00000100,
+        STENCIL_BUFFER_BIT = 0x00000040,
+        BACK_RIGHT_BUFFER_BIT_SGIX = 0x00000008,
+        BACK_LEFT_BUFFER_BIT_SGIX = 0x00000004,
+        AUX_BUFFERS_BIT = 0x00000010,
+        DEPTH_BUFFER_BIT_SGIX = 0x00000020,
+        ACCUM_BUFFER_BIT = 0x00000080,
+        AUX_BUFFERS_BIT_SGIX = 0x00000010,
+        DEPTH_BUFFER_BIT = 0x00000020,
+        FRONT_LEFT_BUFFER_BIT_SGIX = 0x00000001,
+        BACK_LEFT_BUFFER_BIT = 0x00000004,
+        FRONT_RIGHT_BUFFER_BIT = 0x00000002,
+    }
+
+    internal enum GLXHyperpipeMisc : int
+    {
+        HYPERPIPE_PIPE_NAME_LENGTH_SGIX = 80,
+    }
+
+    internal enum GLXErrorCode : int
+    {
+        BAD_CONTEXT = 5,
+        NO_EXTENSION = 3,
+        BAD_HYPERPIPE_SGIX = 92,
+        BAD_ENUM = 7,
+        BAD_SCREEN = 1,
+        BAD_VALUE = 6,
+        BAD_ATTRIBUTE = 2,
+        BAD_VISUAL = 4,
+        BAD_HYPERPIPE_CONFIG_SGIX = 91,
+    }
+
+    internal enum GLXSyncType : int
+    {
+        SYNC_SWAP_SGIX = 0x00000001,
+        SYNC_FRAME_SGIX = 0x00000000,
+    }
+
+    internal enum GLXDrawableTypeMask : int
+    {
+        WINDOW_BIT = 0x00000001,
+        PIXMAP_BIT = 0x00000002,
+        PBUFFER_BIT_SGIX = 0x00000004,
+        PBUFFER_BIT = 0x00000004,
+        WINDOW_BIT_SGIX = 0x00000001,
+        PIXMAP_BIT_SGIX = 0x00000002,
     }
 
     internal enum ArbCreateContext : int
@@ -266,7 +340,7 @@ namespace OpenTK.Platform.X11
 
         public delegate int SwapIntervalMESA(uint interval);
         public static SwapIntervalMESA glXSwapIntervalMESA;
-        
+
         public delegate int GetSwapIntervalMESA();
         public static GetSwapIntervalMESA glXGetSwapIntervalMESA;
 
@@ -356,8 +430,6 @@ namespace OpenTK.Platform.X11
 
         // Returns a pointer to an XVisualInfo structure.
         [DllImport(Library, EntryPoint = "glXGetVisualFromFBConfig")]
-        public unsafe extern static IntPtr GetVisualFromFBConfig(IntPtr dpy, IntPtr fbconfig);        
+        public unsafe extern static IntPtr GetVisualFromFBConfig(IntPtr dpy, IntPtr fbconfig);
     }
 }
-
-#pragma warning restore 1591

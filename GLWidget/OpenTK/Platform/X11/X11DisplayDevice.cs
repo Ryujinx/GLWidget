@@ -26,7 +26,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#if !MINIMAL
 using System.Drawing;
+#endif
 using System.Runtime.InteropServices;
 
 namespace OpenTK.Platform.X11
@@ -111,13 +113,13 @@ namespace OpenTK.Platform.X11
 
         private static DisplayDevice FindDefaultDevice(IEnumerable<DisplayDevice> devices)
         {
-                foreach (DisplayDevice dev in devices)
+            foreach (DisplayDevice dev in devices)
+            {
+                if (dev.IsPrimary)
                 {
-                    if (dev.IsPrimary)
-                    {
-                        return dev;
-                    }
+                    return dev;
                 }
+            }
 
             throw new InvalidOperationException("No primary display found. Please file a bug at https://github.com/opentk/opentk/issues");
         }
@@ -318,13 +320,16 @@ namespace OpenTK.Platform.X11
         {
             return (int)Functions.XDefaultDepth(API.DefaultDisplay, screen);
         }
-        
+
         private static class NativeMethods
         {
             private const string Xinerama = "libXinerama";
 
             [DllImport(Xinerama)]
             public static extern bool XineramaQueryExtension(IntPtr dpy, out int event_basep, out int error_basep);
+
+            [DllImport(Xinerama)]
+            public static extern int XineramaQueryVersion(IntPtr dpy, out int major_versionp, out int minor_versionp);
 
             [DllImport(Xinerama)]
             public static extern bool XineramaIsActive(IntPtr dpy);
